@@ -1,0 +1,251 @@
+<?php
+
+namespace PlanetaTreinamentos\Models;
+
+use PDO;
+
+/**
+ * Model Professor
+ * Gerencia dados de professores
+ */
+class Professor
+{
+    private PDO $db;
+
+    public function __construct(PDO $db)
+    {
+        $this->db = $db;
+    }
+
+    /**
+     * Buscar todos os professores
+     */
+    public function getAll(array $filters = []): array
+    {
+        $sql = "SELECT * FROM professores WHERE deleted_at IS NULL";
+        $params = [];
+
+        // Filtro por status
+        if (isset($filters['status'])) {
+            $sql .= " AND status = ?";
+            $params[] = $filters['status'];
+        }
+
+        // Ordenação
+        $sql .= " ORDER BY nome ASC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Contar todos os professores
+     */
+    public function countAll(array $filters = []): int
+    {
+        $sql = "SELECT COUNT(*) FROM professores WHERE deleted_at IS NULL";
+        $params = [];
+
+        // Filtro por status
+        if (isset($filters['status'])) {
+            $sql .= " AND status = ?";
+            $params[] = $filters['status'];
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Contar professores ativos
+     */
+    public function countAtivos(): int
+    {
+        return $this->countAll(['status' => 'ativo']);
+    }
+
+    /**
+     * Buscar professor por ID
+     */
+    public function getById(int $id): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT * FROM professores 
+            WHERE id = ? AND deleted_at IS NULL
+        ");
+        $stmt->execute([$id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result ?: null;
+    }
+
+    /**
+     * Buscar professor por professorid
+     */
+    public function getByProfessorId(string $professorid): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT * FROM professores 
+            WHERE professorid = ? AND deleted_at IS NULL
+        ");
+        $stmt->execute([$professorid]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result ?: null;
+    }
+
+    /**
+     * Criar novo professor
+     */
+    public function create(array $data): int
+    {
+        $stmt = $this->db->prepare("
+            INSERT INTO professores (
+                professorid, nome, email, whatsapp, telefone,
+                titulo, biografia, formacao, foto_perfil, 
+                assinatura, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+
+        $stmt->execute([
+            $data['professorid'] ?? $this->generateProfessorId(),
+            $data['nome'],
+            $data['email'],
+            $data['whatsapp'] ?? null,
+            $data['telefone'] ?? null,
+            $data['titulo'] ?? null,
+            $data['biografia'] ?? null,
+            $data['formacao'] ?? null,
+            $data['foto_perfil'] ?? null,
+            $data['assinatura'] ?? null,
+            $data['status'] ?? 'ativo'
+        ]);
+
+        return (int) $this->db->lastInsertId();
+    }
+
+    /**
+     * Atualizar professor
+     */
+    public function update(int $id, array $data): bool
+    {
+        $stmt = $this->db->prepare("
+            UPDATE professores SET
+                nome = ?,
+                email = ?,
+                whatsapp = ?,
+                telefone = ?,
+                titulo = ?,
+                biografia = ?,
+                formacao = ?,
+                foto_perfil = ?,
+                assinatura = ?,
+                status = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+
+        return $stmt->execute([
+            $data['nome'],
+            $data['email'],
+            $data['whatsapp'] ?? null,
+            $data['telefone'] ?? null,
+            $data['titulo'] ?? null,
+            $data['biografia'] ?? null,
+            $data['formacao'] ?? null,
+            $data['foto_perfil'] ?? null,
+            $data['assinatura'] ?? null,
+            $data['status'] ?? 'ativo',
+            $id
+        ]);
+    }
+
+    /**
+     * Deletar professor (soft delete)
+     */
+    public function delete(int $id): bool
+    {
+        $stmt = $this->db->prepare("
+            UPDATE professores SET deleted_at = NOW() WHERE id = ?
+        ");
+        return $stmt->execute([$id]);
+    }
+
+    /**
+     * Contar alunos por professor
+     */
+    public function countAlunos(int $professorId): int
+    {
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) FROM alunos 
+            WHERE professor_id = ? AND deleted_at IS NULL
+        ");
+        $stmt->execute([$professorId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Buscar professores ativos
+     */
+    public function getAtivos(): array
+    {
+        return $this->getAll(['status' => 'ativo']);
+    }
+
+    /**
+     * Gerar professorid único
+     */
+    private function generateProfessorId(): string
+    {
+        do {
+            $id = 'PROF' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM professores WHERE professorid = ?");
+            $stmt->execute([$id]);
+            $exists = $stmt->fetchColumn() > 0;
+        } while ($exists);
+
+        return $id;
+    }
+
+    /**
+     * Buscar certificados do professor
+     */
+    public function getCertificados(int $professorId): array
+    {
+        // Verificar se tabela existe
+        try {
+            $stmt = $this->db->prepare("
+                SELECT * FROM certificados_professor 
+                WHERE professor_id = ? 
+                ORDER BY created_at DESC
+            ");
+            $stmt->execute([$professorId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Buscar fotos de turmas
+     */
+    public function getFotosTurmas(int $professorId): array
+    {
+        // Verificar se tabela existe
+        try {
+            $stmt = $this->db->prepare("
+                SELECT * FROM fotos_turmas 
+                WHERE professor_id = ? 
+                ORDER BY created_at DESC
+            ");
+            $stmt->execute([$professorId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            return [];
+        }
+    }
+}

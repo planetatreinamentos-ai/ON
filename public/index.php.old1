@@ -1,0 +1,81 @@
+<?php
+/**
+ * Front Controller - Ponto de entrada da aplicação
+ * 
+ * Todas as requisições passam por este arquivo
+ * 
+ * @package PlanetaTreinamentos
+ * @since 1.0
+ */
+
+// Define o caminho raiz do projeto
+define('ROOT_PATH', dirname(__DIR__));
+
+// Autoload do Composer (será necessário após rodar composer install)
+if (file_exists(ROOT_PATH . '/vendor/autoload.php')) {
+    require ROOT_PATH . '/vendor/autoload.php';
+}
+
+// Registra autoloader customizado para as classes do projeto
+spl_autoload_register(function ($class) {
+    // Remove namespace base
+    $class = str_replace('PlanetaTreinamentos\\', '', $class);
+    
+    // Converte namespace para caminho de arquivo
+    $class = str_replace('\\', DIRECTORY_SEPARATOR, $class);
+    
+    // Caminho completo do arquivo
+    $file = ROOT_PATH . '/src/' . $class . '.php';
+    
+    // Inclui o arquivo se existir
+    if (file_exists($file)) {
+        require $file;
+    }
+});
+
+// Inicia a aplicação
+try {
+    $app = new PlanetaTreinamentos\Core\App();
+    $app->run();
+} catch (Throwable $e) {
+    // Em produção, mostra erro genérico
+    // Em desenvolvimento, mostra detalhes do erro
+    if (isset($_ENV['APP_DEBUG']) && $_ENV['APP_DEBUG'] === 'true') {
+        echo '<pre>';
+        echo 'Error: ' . $e->getMessage() . PHP_EOL;
+        echo 'File: ' . $e->getFile() . PHP_EOL;
+        echo 'Line: ' . $e->getLine() . PHP_EOL;
+        echo PHP_EOL . 'Stack trace:' . PHP_EOL;
+        echo $e->getTraceAsString();
+        echo '</pre>';
+    } else {
+        http_response_code(500);
+        echo '<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erro</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; }
+        h1 { color: #dc2626; }
+    </style>
+</head>
+<body>
+    <h1>Erro</h1>
+    <p>Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.</p>
+</body>
+</html>';
+    }
+    
+    // Loga o erro
+    if (class_exists('PlanetaTreinamentos\Helpers\Logger')) {
+        PlanetaTreinamentos\Helpers\Logger::critical('Fatal error in index.php: ' . $e->getMessage(), [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]);
+    }
+    
+    exit(1);
+}

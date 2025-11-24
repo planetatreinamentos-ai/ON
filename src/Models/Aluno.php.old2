@@ -1,0 +1,351 @@
+<?php
+
+namespace PlanetaTreinamentos\Models;
+
+use PDO;
+
+/**
+ * Model Aluno
+ * Gerencia dados de alunos
+ */
+class Aluno
+{
+    private PDO $db;
+
+    public function __construct(PDO $db)
+    {
+        $this->db = $db;
+    }
+
+    /**
+     * Buscar todos os alunos
+     */
+    public function getAll(array $filters = []): array
+    {
+        $sql = "SELECT a.*, 
+                c.nome as curso_nome,
+                p.nome as professor_nome,
+                ch.carga_horaria as carga_horaria_horas
+                FROM alunos a
+                LEFT JOIN cursos c ON a.curso_id = c.id
+                LEFT JOIN professores p ON a.professor_id = p.id
+                LEFT JOIN cargas_horarias ch ON a.carga_horaria_id = ch.id
+                WHERE a.deleted_at IS NULL";
+        $params = [];
+
+        // Filtro por status
+        if (isset($filters['status'])) {
+            $sql .= " AND a.status = ?";
+            $params[] = $filters['status'];
+        }
+
+        // Filtro por curso
+        if (isset($filters['curso_id'])) {
+            $sql .= " AND a.curso_id = ?";
+            $params[] = $filters['curso_id'];
+        }
+
+        // Filtro por professor
+        if (isset($filters['professor_id'])) {
+            $sql .= " AND a.professor_id = ?";
+            $params[] = $filters['professor_id'];
+        }
+
+        // Ordenação
+        $sql .= " ORDER BY a.nome ASC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Buscar aluno por ID
+     */
+    public function getById(int $id): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT a.*, 
+                c.nome as curso_nome,
+                c.imagem_base as curso_imagem,
+                p.nome as professor_nome,
+                p.professorid as professor_professorid,
+                p.assinatura as professor_assinatura,
+                ch.carga_horaria as carga_horaria_horas
+            FROM alunos a
+            LEFT JOIN cursos c ON a.curso_id = c.id
+            LEFT JOIN professores p ON a.professor_id = p.id
+            LEFT JOIN cargas_horarias ch ON a.carga_horaria_id = ch.id
+            WHERE a.id = ? AND a.deleted_at IS NULL
+        ");
+        $stmt->execute([$id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result ?: null;
+    }
+
+    /**
+     * Buscar aluno por alunoid
+     */
+    public function getByAlunoId(string $alunoid): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT a.*, 
+                c.nome as curso_nome,
+                c.imagem_base as curso_imagem,
+                p.nome as professor_nome,
+                p.professorid as professor_professorid,
+                p.assinatura as professor_assinatura,
+                ch.carga_horaria as carga_horaria_horas
+            FROM alunos a
+            LEFT JOIN cursos c ON a.curso_id = c.id
+            LEFT JOIN professores p ON a.professor_id = p.id
+            LEFT JOIN cargas_horarias ch ON a.carga_horaria_id = ch.id
+            WHERE a.alunoid = ? AND a.deleted_at IS NULL
+        ");
+        $stmt->execute([$alunoid]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result ?: null;
+    }
+
+    /**
+     * Criar novo aluno
+     */
+    public function create(array $data): int
+    {
+        $stmt = $this->db->prepare("
+            INSERT INTO alunos (
+                alunoid, nome, email, whatsapp, telefone,
+                cpf, rg, data_nascimento, endereco, cidade, estado, cep,
+                curso_id, professor_id, carga_horaria_id,
+                data_inicio, data_fim, nota, melhor_aluno,
+                foto_principal, certificado_path, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+
+        $stmt->execute([
+            $data['alunoid'] ?? $this->generateAlunoId(),
+            $data['nome'],
+            $data['email'],
+            $data['whatsapp'] ?? null,
+            $data['telefone'] ?? null,
+            $data['cpf'] ?? null,
+            $data['rg'] ?? null,
+            $data['data_nascimento'] ?? null,
+            $data['endereco'] ?? null,
+            $data['cidade'] ?? null,
+            $data['estado'] ?? null,
+            $data['cep'] ?? null,
+            $data['curso_id'],
+            $data['professor_id'],
+            $data['carga_horaria_id'] ?? null,
+            $data['data_inicio'] ?? null,
+            $data['data_fim'] ?? null,
+            $data['nota'] ?? null,
+            $data['melhor_aluno'] ?? 0,
+            $data['foto_principal'] ?? null,
+            $data['certificado_path'] ?? null,
+            $data['status'] ?? 'ativo'
+        ]);
+
+        return (int) $this->db->lastInsertId();
+    }
+
+    /**
+     * Atualizar aluno
+     */
+    public function update(int $id, array $data): bool
+    {
+        $stmt = $this->db->prepare("
+            UPDATE alunos SET
+                nome = ?,
+                email = ?,
+                whatsapp = ?,
+                telefone = ?,
+                cpf = ?,
+                rg = ?,
+                data_nascimento = ?,
+                endereco = ?,
+                cidade = ?,
+                estado = ?,
+                cep = ?,
+                curso_id = ?,
+                professor_id = ?,
+                carga_horaria_id = ?,
+                data_inicio = ?,
+                data_fim = ?,
+                nota = ?,
+                melhor_aluno = ?,
+                foto_principal = ?,
+                status = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+
+        return $stmt->execute([
+            $data['nome'],
+            $data['email'],
+            $data['whatsapp'] ?? null,
+            $data['telefone'] ?? null,
+            $data['cpf'] ?? null,
+            $data['rg'] ?? null,
+            $data['data_nascimento'] ?? null,
+            $data['endereco'] ?? null,
+            $data['cidade'] ?? null,
+            $data['estado'] ?? null,
+            $data['cep'] ?? null,
+            $data['curso_id'],
+            $data['professor_id'],
+            $data['carga_horaria_id'] ?? null,
+            $data['data_inicio'] ?? null,
+            $data['data_fim'] ?? null,
+            $data['nota'] ?? null,
+            $data['melhor_aluno'] ?? 0,
+            $data['foto_principal'] ?? null,
+            $data['status'] ?? 'ativo',
+            $id
+        ]);
+    }
+
+    /**
+     * Deletar aluno (soft delete)
+     */
+    public function delete(int $id): bool
+    {
+        $stmt = $this->db->prepare("
+            UPDATE alunos SET deleted_at = NOW() WHERE id = ?
+        ");
+        return $stmt->execute([$id]);
+    }
+
+    /**
+     * Gerar alunoid único
+     */
+    private function generateAlunoId(): string
+    {
+        do {
+            $id = str_pad(mt_rand(1, 999999), 6, '0', STR_PAD_LEFT);
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM alunos WHERE alunoid = ?");
+            $stmt->execute([$id]);
+            $exists = $stmt->fetchColumn() > 0;
+        } while ($exists);
+
+        return $id;
+    }
+
+    /**
+     * Contar alunos por curso
+     */
+    public function countByCurso(int $cursoId): int
+    {
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) FROM alunos 
+            WHERE curso_id = ? AND deleted_at IS NULL AND status = 'ativo'
+        ");
+        $stmt->execute([$cursoId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Contar alunos por professor
+     */
+    public function countByProfessor(int $professorId): int
+    {
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) FROM alunos 
+            WHERE professor_id = ? AND deleted_at IS NULL AND status = 'ativo'
+        ");
+        $stmt->execute([$professorId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Buscar alunos ativos
+     */
+    public function getAtivos(): array
+    {
+        return $this->getAll(['status' => 'ativo']);
+    }
+
+    /**
+     * Buscar fotos adicionais do aluno
+     */
+    public function getFotosAdicionais(int $alunoId): array
+    {
+        $stmt = $this->db->prepare("
+            SELECT * FROM fotos_alunos 
+            WHERE aluno_id = ? 
+            ORDER BY ordem ASC, created_at DESC
+        ");
+        $stmt->execute([$alunoId]);
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Verificar se aluno tem certificado gerado
+     */
+    public function hasCertificado(int $alunoId): bool
+    {
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) FROM alunos 
+            WHERE id = ? AND certificado_path IS NOT NULL AND certificado_path != ''
+        ");
+        $stmt->execute([$alunoId]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    /**
+     * Atualizar path do certificado
+     */
+    public function updateCertificadoPath(int $alunoId, string $path): bool
+    {
+        $stmt = $this->db->prepare("
+            UPDATE alunos SET 
+                certificado_path = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+        return $stmt->execute([$path, $alunoId]);
+    }
+
+    /**
+     * Buscar estatísticas gerais
+     */
+    public function getStats(): array
+    {
+        // Total de alunos ativos
+        $stmt = $this->db->query("
+            SELECT COUNT(*) as total 
+            FROM alunos 
+            WHERE deleted_at IS NULL AND status = 'ativo'
+        ");
+        $totalAtivos = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+        // Total com certificado
+        $stmt = $this->db->query("
+            SELECT COUNT(*) as total 
+            FROM alunos 
+            WHERE deleted_at IS NULL 
+            AND certificado_path IS NOT NULL 
+            AND certificado_path != ''
+        ");
+        $totalComCertificado = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+        // Melhores alunos
+        $stmt = $this->db->query("
+            SELECT COUNT(*) as total 
+            FROM alunos 
+            WHERE deleted_at IS NULL AND melhor_aluno = 1
+        ");
+        $totalMelhoresAlunos = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+        return [
+            'total_ativos' => $totalAtivos,
+            'total_com_certificado' => $totalComCertificado,
+            'total_melhores_alunos' => $totalMelhoresAlunos
+        ];
+    }
+}

@@ -1,0 +1,160 @@
+<?php
+/**
+ * Arquivo de Rotas - Planeta Treinamentos
+ * Sintaxe compatível com Router legado (string format)
+ * Todas as rotas do sistema (Fases 1-4)
+ */
+
+use PlanetaTreinamentos\Core\Router;
+
+$router = new Router();
+
+// ============================================
+// ROTAS PÚBLICAS (SEM AUTENTICAÇÃO)
+// ============================================
+
+// Homepage e Páginas Institucionais
+$router->get('/', 'PublicController@home');
+$router->get('/sobre', 'PublicController@sobre');
+$router->get('/erro', 'PublicController@error');
+
+// Professor Público
+$router->get('/professor', 'ProfessorPublicoController@show');
+
+// Contato
+$router->get('/contato', 'ContatoController@show');
+$router->post('/contato/enviar', 'ContatoController@send');
+
+// Formulário de Interesse
+$router->post('/interessados/criar', 'PublicController@createInteressado');
+
+// Verificação de Certificado (Fase 3)
+$router->get('/verificar/{alunoid}', 'CertificadoController@verificar');
+$router->get('/aluno', 'CertificadoController@verificarLegacy');
+
+// Pré-cadastro (Fase 3)
+$router->get('/cadastro/aluno/{token}', 'PreCadastroController@showAluno');
+$router->post('/cadastro/aluno/{token}', 'PreCadastroController@completeAluno');
+$router->get('/cadastro/professor/{token}', 'PreCadastroController@showProfessor');
+$router->post('/cadastro/professor/{token}', 'PreCadastroController@completeProfessor');
+
+// ============================================
+// AUTENTICAÇÃO
+// ============================================
+
+$router->get('/login', 'AuthController@showLogin');
+$router->post('/login', 'AuthController@login');
+$router->get('/logout', 'AuthController@logout');
+$router->get('/esqueci-senha', 'AuthController@showForgotPassword');
+$router->post('/esqueci-senha', 'AuthController@forgotPassword');
+$router->get('/redefinir-senha/{token}', 'AuthController@showResetPassword');
+$router->post('/redefinir-senha/{token}', 'AuthController@resetPassword');
+
+// ============================================
+// ÁREA ADMINISTRATIVA (REQUER AUTENTICAÇÃO)
+// ============================================
+
+// Dashboard
+$router->get('/admin', 'DashboardController@index');
+$router->get('/admin/dashboard', 'DashboardController@index');
+
+// ============================================
+// CURSOS (FASE 2)
+// ============================================
+
+$router->get('/admin/cursos', 'CursoController@index');
+$router->get('/admin/cursos/criar', 'CursoController@create');
+$router->post('/admin/cursos', 'CursoController@store');
+$router->get('/admin/cursos/{id}/editar', 'CursoController@edit');
+$router->post('/admin/cursos/{id}/atualizar', 'CursoController@update');
+$router->post('/admin/cursos/{id}/deletar', 'CursoController@delete');
+
+// ============================================
+// PROFESSORES (FASE 2)
+// ============================================
+
+$router->get('/admin/professores', 'ProfessorController@index');
+$router->get('/admin/professores/criar', 'ProfessorController@create');
+$router->post('/admin/professores', 'ProfessorController@store');
+$router->get('/admin/professores/{id}/editar', 'ProfessorController@edit');
+$router->post('/admin/professores/{id}/atualizar', 'ProfessorController@update');
+$router->post('/admin/professores/{id}/deletar', 'ProfessorController@delete');
+
+// ============================================
+// ALUNOS (FASE 2)
+// ============================================
+
+$router->get('/admin/alunos', 'AlunoController@index');
+$router->get('/admin/alunos/criar', 'AlunoController@create');
+$router->post('/admin/alunos', 'AlunoController@store');
+$router->get('/admin/alunos/{id}/editar', 'AlunoController@edit');
+$router->post('/admin/alunos/{id}/atualizar', 'AlunoController@update');
+$router->post('/admin/alunos/{id}/deletar', 'AlunoController@delete');
+
+// ============================================
+// CARGAS HORÁRIAS (FASE 2)
+// ============================================
+
+$router->get('/admin/cargas', 'CargaHorariaController@index');
+$router->get('/admin/cargas/criar', 'CargaHorariaController@create');
+$router->post('/admin/cargas', 'CargaHorariaController@store');
+$router->get('/admin/cargas/{id}/editar', 'CargaHorariaController@edit');
+$router->post('/admin/cargas/{id}/atualizar', 'CargaHorariaController@update');
+$router->post('/admin/cargas/{id}/deletar', 'CargaHorariaController@delete');
+
+// ============================================
+// CERTIFICADOS (FASE 3)
+// ============================================
+
+$router->get('/admin/certificados', 'CertificadoController@index');
+$router->get('/admin/certificados/gerar/{aluno_id}', 'CertificadoController@generate');
+$router->post('/admin/certificados/gerar-lote', 'CertificadoController@generateBatch');
+$router->get('/admin/certificados/download/{aluno_id}', 'CertificadoController@download');
+$router->get('/admin/certificados/preview/{aluno_id}', 'CertificadoController@preview');
+
+// ============================================
+// PRÉ-CADASTRO (FASE 3)
+// ============================================
+
+// Pré-cadastro de Alunos
+$router->get('/admin/pre-cadastro/alunos', 'PreCadastroController@indexAlunos');
+$router->post('/admin/pre-cadastro/alunos', 'PreCadastroController@createBatchAlunos');
+$router->get('/admin/pre-cadastro/alunos/{id}', 'PreCadastroController@showPreCadastroAluno');
+$router->post('/admin/pre-cadastro/alunos/{id}/reenviar', 'PreCadastroController@resendAluno');
+$router->post('/admin/pre-cadastro/alunos/{id}/cancelar', 'PreCadastroController@cancelAluno');
+
+// Pré-cadastro de Professores
+$router->get('/admin/pre-cadastro/professores', 'PreCadastroController@indexProfessores');
+$router->post('/admin/pre-cadastro/professores', 'PreCadastroController@createProfessor');
+$router->get('/admin/pre-cadastro/professores/{id}', 'PreCadastroController@showPreCadastroProfessor');
+$router->post('/admin/pre-cadastro/professores/{id}/reenviar', 'PreCadastroController@resendProfessor');
+$router->post('/admin/pre-cadastro/professores/{id}/cancelar', 'PreCadastroController@cancelProfessor');
+
+// ============================================
+// CONFIGURAÇÕES (FASE 1)
+// ============================================
+
+$router->get('/admin/configuracoes', 'ConfigController@index');
+$router->post('/admin/configuracoes', 'ConfigController@update');
+$router->get('/admin/configuracoes/empresa', 'ConfigController@empresa');
+$router->get('/admin/configuracoes/email', 'ConfigController@email');
+$router->get('/admin/configuracoes/integracao', 'ConfigController@integracao');
+
+// ============================================
+// API ENDPOINTS (AJAX)
+// ============================================
+
+// API para buscar dados (DataTables, etc)
+$router->get('/api/cursos', 'CursoController@apiList');
+$router->get('/api/professores', 'ProfessorController@apiList');
+$router->get('/api/alunos', 'AlunoController@apiList');
+
+// API para buscar relacionamentos
+$router->get('/api/cursos/{curso_id}/cargas', 'CargaHorariaController@apiByCurso');
+$router->get('/api/professores/ativos', 'ProfessorController@apiAtivos');
+
+// ============================================
+// EXECUTAR ROTEAMENTO
+// ============================================
+
+return $router;

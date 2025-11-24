@@ -1,0 +1,202 @@
+<?php
+
+namespace PlanetaTreinamentos\Controllers;
+
+use PlanetaTreinamentos\Helpers\EmailHelper;
+use PlanetaTreinamentos\Helpers\Validator;
+
+/**
+ * Controller para formulário de contato
+ */
+class ContatoController extends Controller
+{
+    private EmailHelper $emailHelper;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->emailHelper = new EmailHelper();
+    }
+
+    /**
+     * Exibir página de contato
+     */
+    public function show(): void
+    {
+        $config = $this->getConfig();
+
+        $data = [
+            'pageTitle' => 'Contato | ' . $config['nome_empresa'],
+            'metaDescription' => 'Entre em contato com ' . $config['nome_empresa'],
+            'config' => $config,
+            'success' => $_GET['success'] ?? null,
+            'error' => $_GET['error'] ?? null
+        ];
+
+        $this->render('public/contato', $data, 'public');
+    }
+
+    /**
+     * Enviar formulário de contato
+     */
+    public function send(): void
+    {
+        // Verificar CSRF
+        if (!$this->validateCSRF()) {
+            $_SESSION['error'] = 'Token inválido. Tente novamente.';
+            $this->redirect('/contato?error=token_invalido');
+            return;
+        }
+
+        // Validar dados
+        $validator = new Validator($_POST);
+        $validator->required(['nome', 'email', 'assunto', 'mensagem']);
+        $validator->email('email');
+        $validator->minLength('nome', 3);
+        $validator->minLength('mensagem', 10);
+
+        if (!$validator->isValid()) {
+            $_SESSION['errors'] = $validator->getErrors();
+            $_SESSION['old'] = $_POST;
+            $this->redirect('/contato?error=validacao');
+            return;
+        }
+
+        // Sanitizar dados
+        $nome = filter_var($_POST['nome'], FILTER_SANITIZE_STRING);
+        $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+        $telefone = filter_var($_POST['telefone'] ?? '', FILTER_SANITIZE_STRING);
+        $assunto = filter_var($_POST['assunto'], FILTER_SANITIZE_STRING);
+        $mensagem = filter_var($_POST['mensagem'], FILTER_SANITIZE_STRING);
+
+        // Proteção anti-spam (Honeypot)
+        if (!empty($_POST['website'])) {
+            $this->log('Tentativa de spam detectada no formulário de contato', 'warning', [
+                'email' => $email,
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+            ]);
+            $this->redirect('/contato?success=1'); // Finge que enviou
+            return;
+        }
+
+        // Rate limiting (máximo 3 envios por hora por IP)
+        if (!$this->checkRateLimit('contato', 3, 3600)) {
+            $_SESSION['error'] = 'Você atingiu o limite de envios. Tente novamente mais tarde.';
+            $this->redirect('/contato?error=rate_limit');
+            return;
+        }
+
+        // Obter configurações
+        $config = $this->getConfig();
+
+        // Preparar email para o admin
+        $emailBody = "
+        <h2>Nova mensagem de contato</h2>
+        <p><strong>Nome:</strong> {$nome}</p>
+        <p><strong>Email:</strong> {$email}</p>
+        <p><strong>Telefone:</strong> " . ($telefone ?: 'Não informado') . "</p>
+        <p><strong>Assunto:</strong> {$assunto}</p>
+        <p><strong>Mensagem:</strong></p>
+        <p>" . nl2br($mensagem) . "</p>
+        <hr>
+        <p><small>Enviado em: " . date('d/m/Y H:i:s') . "</small></p>
+        <p><small>IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown') . "</small></p>
+        ";
+
+        // Enviar email
+        try {
+            $emailSent = $this->emailHelper->send(
+                $config['email_contato'] ?? $config['email_admin'],
+                $config['nome_empresa'],
+                "Contato: {$assunto}",
+                $emailBody,
+                $email,  // Reply-to
+                $nome    // Reply-to name
+            );
+
+            if ($emailSent) {
+                // Salvar no banco de dados (opcional - tabela mensagens_contato)
+                $this->saveContactMessage([
+                    'nome' => $nome,
+                    'email' => $email,
+                    'telefone' => $telefone,
+                    'assunto' => $assunto,
+                    'mensagem' => $mensagem,
+                    'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null
+                ]);
+
+                // Log
+                $this->log('Mensagem de contato enviada', 'info', [
+                    'nome' => $nome,
+                    'email' => $email,
+                    'assunto' => $assunto
+                ]);
+
+                // Enviar email de confirmação para o usuário
+                $this->sendConfirmationEmail($nome, $email, $config);
+
+                $_SESSION['success'] = 'Mensagem enviada com sucesso! Entraremos em contato em breve.';
+                $this->redirect('/contato?success=1');
+            } else {
+                throw new \Exception('Falha ao enviar email');
+            }
+        } catch (\Exception $e) {
+            $this->log('Erro ao enviar mensagem de contato: ' . $e->getMessage(), 'error');
+            $_SESSION['error'] = 'Erro ao enviar mensagem. Por favor, tente novamente ou entre em contato por telefone.';
+            $this->redirect('/contato?error=envio_falhou');
+        }
+    }
+
+    /**
+     * Salvar mensagem de contato no banco
+     */
+    private function saveContactMessage(array $data): bool
+    {
+        try {
+            $sql = "INSERT INTO mensagens_contato (
+                nome, email, telefone, assunto, mensagem, 
+                ip_address, created_at
+            ) VALUES (
+                :nome, :email, :telefone, :assunto, :mensagem,
+                :ip_address, NOW()
+            )";
+
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute($data);
+        } catch (\PDOException $e) {
+            error_log("Erro ao salvar mensagem de contato: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Enviar email de confirmação para o usuário
+     */
+    private function sendConfirmationEmail(string $nome, string $email, array $config): void
+    {
+        try {
+            $emailBody = "
+            <h2>Olá, {$nome}!</h2>
+            <p>Recebemos sua mensagem e entraremos em contato em breve.</p>
+            <p>Nossa equipe está trabalhando para responder o mais rápido possível.</p>
+            <hr>
+            <p><strong>Outras formas de contato:</strong></p>
+            <p>📞 Telefone: {$config['telefone']}</p>
+            <p>📱 WhatsApp: {$config['whatsapp']}</p>
+            <p>📧 Email: {$config['email_contato']}</p>
+            <hr>
+            <p>Atenciosamente,<br>
+            <strong>{$config['nome_empresa']}</strong></p>
+            ";
+
+            $this->emailHelper->send(
+                $email,
+                $nome,
+                "Recebemos sua mensagem - " . $config['nome_empresa'],
+                $emailBody
+            );
+        } catch (\Exception $e) {
+            error_log("Erro ao enviar email de confirmação: " . $e->getMessage());
+        }
+    }
+}

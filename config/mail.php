@@ -1,0 +1,36 @@
+<?php
+/**
+ * Configurações de Email
+ * 
+ * Configurações para envio de emails via SMTP (Hostinger)
+ * 
+ * @package PlanetaTreinamentos
+ * @since 1.0
+ */
+
+return [
+    'driver' => $_ENV['MAIL_DRIVER'] ?? 'smtp',
+    
+    'smtp' => [
+        'host' => $_ENV['MAIL_HOST'] ?? 'smtp.hostinger.com',
+        'port' => (int) ($_ENV['MAIL_PORT'] ?? 587),
+        'username' => $_ENV['MAIL_USERNAME'] ?? '',
+        'password' => $_ENV['MAIL_PASSWORD'] ?? '',
+        'encryption' => $_ENV['MAIL_ENCRYPTION'] ?? 'tls', // tls ou ssl
+        'auth' => true,
+        'timeout' => 30,
+    ],
+    
+    'from' => [
+        'address' => $_ENV['MAIL_FROM_ADDRESS'] ?? 'contato@planetatreinamentos.com.br',
+        'name' => $_ENV['MAIL_FROM_NAME'] ?? 'Planeta Treinamentos',
+    ],
+    
+    // Templates de email
+    'templates' => [
+        'reset_password' => 'emails/reset-password.php',
+        'welcome' => 'emails/welcome.php',
+        'certificate_ready' => 'emails/certificate-ready.php',
+        'pre_registration' => 'emails/pre-registration.php',
+    ],
+];

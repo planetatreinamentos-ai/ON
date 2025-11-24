@@ -1,0 +1,299 @@
+<?php
+
+namespace PlanetaTreinamentos\Controllers;
+
+use PDO;
+
+/**
+ * Controller Público
+ * Gerencia páginas públicas do site
+ * VERSÃO CORRIGIDA - Novembro 2025
+ */
+class PublicController extends Controller
+{
+    /**
+     * Homepage
+     */
+    public function home(): void
+    {
+        try {
+            // Buscar cursos ativos
+            $stmt = $this->db->prepare("
+                SELECT 
+                    id,
+                    nome,
+                    descricao,
+                    ordem_exibicao,
+                    (SELECT COUNT(*) FROM alunos WHERE curso_id = cursos.id AND status = 1) as total_alunos
+                FROM cursos 
+                WHERE status = 1 
+                ORDER BY ordem_exibicao ASC, nome ASC
+                LIMIT 6
+            ");
+            $stmt->execute();
+            $cursos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Buscar professores ativos - CORRIGIDO: foto em vez de foto_perfil
+            $stmt = $this->db->prepare("
+                SELECT 
+                    id,
+                    professorid,
+                    nome,
+                    foto,
+                    descricao,
+                    formacao,
+                    ordem_exibicao,
+                    (SELECT COUNT(*) FROM alunos WHERE professor_id = professores.id AND status = 1) as total_alunos
+                FROM professores 
+                WHERE status = 1 
+                ORDER BY ordem_exibicao ASC, nome ASC
+                LIMIT 8
+            ");
+            $stmt->execute();
+            $professores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Buscar alunos destaque (melhores alunos ou alunos ativos)
+            $stmt = $this->db->prepare("
+                SELECT 
+                    a.id,
+                    a.alunoid,
+                    a.nome,
+                    a.foto_principal as foto,
+                    a.nota,
+                    a.melhor_aluno,
+                    a.data_fim,
+                    c.nome as curso_nome
+                FROM alunos a
+                INNER JOIN cursos c ON a.curso_id = c.id
+                WHERE a.status = 1
+                ORDER BY a.melhor_aluno DESC, a.nota DESC, a.data_fim DESC
+                LIMIT 12
+            ");
+            $stmt->execute();
+            $alunosDestaque = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Buscar estatísticas
+            $stmt = $this->db->query("
+                SELECT 
+                    (SELECT COUNT(*) FROM alunos WHERE status = 1) as total_alunos,
+                    (SELECT COUNT(DISTINCT CONCAT(curso_id, '-', professor_id, '-', YEAR(data_inicio))) 
+                     FROM alunos WHERE status = 1) as total_turmas,
+                    (SELECT YEAR(CURRENT_DATE) - YEAR(MIN(created_at)) 
+                     FROM alunos) as anos_experiencia
+            ");
+            $estatisticas = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Buscar configurações
+            $stmt = $this->db->query("SELECT chave, valor FROM configuracoes");
+            $configData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $config = [];
+            foreach ($configData as $row) {
+                $config[$row['chave']] = $row['valor'];
+            }
+            
+            // Renderizar view
+            $this->render('public/home', [
+                'cursos' => $cursos ?: [],
+                'professores' => $professores ?: [],
+                'alunosDestaque' => $alunosDestaque ?: [],
+                'estatisticas' => $estatisticas ?: [
+                    'total_alunos' => 0,
+                    'total_turmas' => 0,
+                    'anos_experiencia' => 0
+                ],
+                'config' => $config ?: []
+            ]);
+            
+        } catch (\PDOException $e) {
+            // Log erro SQL
+            error_log("Erro SQL no PublicController::home: " . $e->getMessage());
+            
+            // Renderizar com dados vazios
+            $this->render('public/home', [
+                'cursos' => [],
+                'professores' => [],
+                'alunosDestaque' => [],
+                'estatisticas' => [
+                    'total_alunos' => 0,
+                    'total_turmas' => 0,
+                    'anos_experiencia' => 0
+                ],
+                'config' => []
+            ]);
+            
+        } catch (\Exception $e) {
+            // Log erro geral
+            error_log("Erro no PublicController::home: " . $e->getMessage());
+            
+            // Renderizar com dados vazios
+            $this->render('public/home', [
+                'cursos' => [],
+                'professores' => [],
+                'alunosDestaque' => [],
+                'estatisticas' => [
+                    'total_alunos' => 0,
+                    'total_turmas' => 0,
+                    'anos_experiencia' => 0
+                ],
+                'config' => []
+            ]);
+        }
+    }
+    
+    /**
+     * Página Sobre
+     */
+    public function sobre(): void
+    {
+        try {
+            // Buscar configurações
+            $stmt = $this->db->query("SELECT chave, valor FROM configuracoes");
+            $configData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $config = [];
+            foreach ($configData as $row) {
+                $config[$row['chave']] = $row['valor'];
+            }
+            
+            // Buscar estatísticas
+            $stmt = $this->db->query("
+                SELECT 
+                    (SELECT COUNT(*) FROM alunos WHERE status = 1) as total_alunos,
+                    (SELECT COUNT(*) FROM cursos WHERE status = 1) as total_cursos,
+                    (SELECT COUNT(*) FROM professores WHERE status = 1) as total_professores,
+                    (SELECT YEAR(CURRENT_DATE) - YEAR(MIN(created_at)) FROM alunos) as anos_experiencia
+            ");
+            $estatisticas = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $this->render('public/sobre', [
+                'config' => $config ?: [],
+                'estatisticas' => $estatisticas ?: [
+                    'total_alunos' => 0,
+                    'total_cursos' => 0,
+                    'total_professores' => 0,
+                    'anos_experiencia' => 0
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log("Erro no PublicController::sobre: " . $e->getMessage());
+            
+            $this->render('public/sobre', [
+                'config' => [],
+                'estatisticas' => [
+                    'total_alunos' => 0,
+                    'total_cursos' => 0,
+                    'total_professores' => 0,
+                    'anos_experiencia' => 0
+                ]
+            ]);
+        }
+    }
+    
+    /**
+     * Página de Contato
+     */
+    public function contato(): void
+    {
+        try {
+            $stmt = $this->db->query("SELECT chave, valor FROM configuracoes");
+            $configData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $config = [];
+            foreach ($configData as $row) {
+                $config[$row['chave']] = $row['valor'];
+            }
+            
+            $this->render('public/contato', ['config' => $config]);
+            
+        } catch (\Exception $e) {
+            error_log("Erro no PublicController::contato: " . $e->getMessage());
+            $this->render('public/contato', ['config' => []]);
+        }
+    }
+    
+    /**
+     * Processar formulário de interesse
+     */
+    public function interessadosCreate(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/');
+            return;
+        }
+        
+        // Validar CSRF
+        if (!$this->validateCSRF()) {
+            $_SESSION['error'] = 'Erro de segurança. Tente novamente.';
+            $this->redirect('/#interesse');
+            return;
+        }
+        
+        // Honeypot anti-spam
+        if (!empty($_POST['website'])) {
+            $this->redirect('/');
+            return;
+        }
+        
+        // Validar dados
+        $nome = $this->sanitize($_POST['nome'] ?? '');
+        $email = filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL);
+        $whatsapp = $this->sanitize($_POST['whatsapp'] ?? '');
+        $curso_interesse = (int)($_POST['curso_interesse'] ?? 0);
+        $mensagem = $this->sanitize($_POST['mensagem'] ?? '');
+        
+        if (empty($nome) || empty($email)) {
+            $_SESSION['error'] = 'Nome e email são obrigatórios.';
+            $_SESSION['old'] = $_POST;
+            $this->redirect('/#interesse');
+            return;
+        }
+        
+        if (!$this->isValidEmail($email)) {
+            $_SESSION['error'] = 'Email inválido.';
+            $_SESSION['old'] = $_POST;
+            $this->redirect('/#interesse');
+            return;
+        }
+        
+        try {
+            // Verificar se já existe interesse recente (últimas 24h)
+            $stmt = $this->db->prepare("
+                SELECT id FROM interessados 
+                WHERE email = ? 
+                AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+            ");
+            $stmt->execute([$email]);
+            
+            if ($stmt->fetch()) {
+                $_SESSION['error'] = 'Você já manifestou interesse recentemente. Entraremos em contato em breve!';
+                $this->redirect('/#interesse');
+                return;
+            }
+            
+            // Inserir interesse
+            $stmt = $this->db->prepare("
+                INSERT INTO interessados 
+                (nome, email, whatsapp, curso_interesse, mensagem, status, ip_address, user_agent) 
+                VALUES (?, ?, ?, ?, ?, 'pendente', ?, ?)
+            ");
+            
+            $stmt->execute([
+                $nome,
+                $email,
+                $whatsapp,
+                $curso_interesse > 0 ? $curso_interesse : null,
+                $mensagem,
+                $_SERVER['REMOTE_ADDR'] ?? '',
+                $_SERVER['HTTP_USER_AGENT'] ?? ''
+            ]);
+            
+            $_SESSION['success'] = 'Obrigado pelo seu interesse! Entraremos em contato em breve.';
+            $this->redirect('/#interesse');
+            
+        } catch (\Exception $e) {
+            error_log("Erro ao salvar interessado: " . $e->getMessage());
+            $_SESSION['error'] = 'Erro ao enviar. Tente novamente.';
+            $_SESSION['old'] = $_POST;
+            $this->redirect('/#interesse');
+        }
+    }
+}

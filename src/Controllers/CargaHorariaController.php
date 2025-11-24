@@ -1,0 +1,131 @@
+<?php
+namespace PlanetaTreinamentos\Controllers;
+
+use PlanetaTreinamentos\Core\View;
+use PlanetaTreinamentos\Core\Session;
+use PlanetaTreinamentos\Core\CSRF;
+use PlanetaTreinamentos\Core\Database;
+use PlanetaTreinamentos\Models\CargaHoraria;
+use PlanetaTreinamentos\Helpers\Validator;
+use PlanetaTreinamentos\Helpers\Logger;
+
+class CargaHorariaController
+{
+    private CargaHoraria $cargaHorariaModel;
+    
+    public function __construct()
+    {
+        $db = Database::getInstance()->getConnection();
+        $this->cargaHorariaModel = new CargaHoraria($db);
+    }
+    
+    public function index(): void
+    {
+        $cargasHorarias = $this->cargaHorariaModel->allWithInactive();
+        View::make('cargas-horarias/index', ['pageTitle' => 'Cargas Horárias', 'cargasHorarias' => $cargasHorarias], 'admin');
+    }
+    
+    public function store(): void
+    {
+        CSRF::check();
+        
+        $validator = new Validator($_POST);
+        $validator
+            ->required('horas', 'Horas é obrigatório')
+            ->integer('horas', 'Horas deve ser um número inteiro')
+            ->custom('horas', function($value) { return $value > 0; }, 'Horas deve ser maior que zero');
+        
+        if ($validator->fails()) {
+            Session::error($validator->firstError());
+            back();
+        }
+        
+        $horas = Validator::sanitizeInt($_POST['horas']);
+        
+        if ($this->cargaHorariaModel->horasExists($horas)) {
+            Session::error('Esta carga horária já está cadastrada.');
+            back();
+        }
+        
+        try {
+            $data = ['horas' => $horas, 'status' => isset($_POST['status']) ? 1 : 0];
+            $id = $this->cargaHorariaModel->create($data);
+            Logger::audit('Carga horária criada', ['id' => $id, 'horas' => $horas]);
+            Session::success('Carga horária cadastrada com sucesso!');
+            redirect('/admin/cargas-horarias');
+            
+        } catch (\Exception $e) {
+            Logger::error('Erro ao criar carga horária: ' . $e->getMessage());
+            Session::error('Erro ao cadastrar carga horária.');
+            back();
+        }
+    }
+    
+    public function update(string $id): void
+    {
+        CSRF::check();
+        
+        $cargaHoraria = $this->cargaHorariaModel->findById((int)$id);
+        
+        if (!$cargaHoraria) {
+            Session::error('Carga horária não encontrada.');
+            redirect('/admin/cargas-horarias');
+        }
+        
+        $validator = new Validator($_POST);
+        $validator
+            ->required('horas', 'Horas é obrigatório')
+            ->integer('horas', 'Horas deve ser um número inteiro')
+            ->custom('horas', function($value) { return $value > 0; }, 'Horas deve ser maior que zero');
+        
+        if ($validator->fails()) {
+            Session::error($validator->firstError());
+            back();
+        }
+        
+        $horas = Validator::sanitizeInt($_POST['horas']);
+        
+        if ($this->cargaHorariaModel->horasExists($horas, (int)$id)) {
+            Session::error('Esta carga horária já está cadastrada.');
+            back();
+        }
+        
+        try {
+            $data = ['horas' => $horas, 'status' => isset($_POST['status']) ? 1 : 0];
+            $this->cargaHorariaModel->update((int)$id, $data);
+            Logger::audit('Carga horária atualizada', ['id' => $id, 'horas' => $horas]);
+            Session::success('Carga horária atualizada com sucesso!');
+            redirect('/admin/cargas-horarias');
+            
+        } catch (\Exception $e) {
+            Logger::error('Erro ao atualizar carga horária: ' . $e->getMessage());
+            Session::error('Erro ao atualizar carga horária.');
+            back();
+        }
+    }
+    
+    public function delete(string $id): void
+    {
+        CSRF::check();
+        
+        $cargaHoraria = $this->cargaHorariaModel->findById((int)$id);
+        
+        if (!$cargaHoraria) {
+            jsonResponse(['success' => false, 'message' => 'Carga horária não encontrada.'], 404);
+        }
+        
+        if ($this->cargaHorariaModel->isInUse((int)$id)) {
+            jsonResponse(['success' => false, 'message' => 'Não é possível excluir esta carga horária pois existem alunos cadastrados com ela.'], 400);
+        }
+        
+        try {
+            $this->cargaHorariaModel->delete((int)$id);
+            Logger::audit('Carga horária deletada', ['id' => $id]);
+            jsonResponse(['success' => true, 'message' => 'Carga horária deletada com sucesso!']);
+            
+        } catch (\Exception $e) {
+            Logger::error('Erro ao deletar carga horária: ' . $e->getMessage());
+            jsonResponse(['success' => false, 'message' => 'Erro ao deletar carga horária.'], 500);
+        }
+    }
+}

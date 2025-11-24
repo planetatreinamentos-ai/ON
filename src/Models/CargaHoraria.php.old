@@ -1,0 +1,110 @@
+<?php
+/**
+ * Model CargaHoraria
+ * 
+ * Gerencia operações com cargas horárias
+ * 
+ * @package PlanetaTreinamentos\Models
+ * @since 1.0
+ */
+
+namespace PlanetaTreinamentos\Models;
+
+use PlanetaTreinamentos\Core\Database;
+
+class CargaHoraria
+{
+    private Database $db;
+    
+    public function __construct()
+    {
+        $this->db = Database::getInstance();
+    }
+    
+    /**
+     * Lista todas as cargas horárias ativas
+     */
+    public function all(): array
+    {
+        $sql = "SELECT * FROM cargas_horarias WHERE status = 1 ORDER BY horas";
+        return $this->db->fetchAll($sql);
+    }
+    
+    /**
+     * Lista todas incluindo inativas
+     */
+    public function allWithInactive(): array
+    {
+        $sql = "SELECT * FROM cargas_horarias ORDER BY horas";
+        return $this->db->fetchAll($sql);
+    }
+    
+    /**
+     * Busca carga horária por ID
+     */
+    public function findById(int $id): ?array
+    {
+        $sql = "SELECT * FROM cargas_horarias WHERE id = :id";
+        return $this->db->fetchOne($sql, ['id' => $id]);
+    }
+    
+    /**
+     * Verifica se já existe a mesma quantidade de horas
+     */
+    public function horasExists(int $horas, ?int $exceptId = null): bool
+    {
+        $sql = "SELECT COUNT(*) FROM cargas_horarias WHERE horas = :horas";
+        $params = ['horas' => $horas];
+        
+        if ($exceptId) {
+            $sql .= " AND id != :id";
+            $params['id'] = $exceptId;
+        }
+        
+        return (int) $this->db->fetchColumn($sql, $params) > 0;
+    }
+    
+    /**
+     * Cria nova carga horária
+     */
+    public function create(array $data): int
+    {
+        $data['created_at'] = date('Y-m-d H:i:s');
+        return $this->db->insert('cargas_horarias', $data);
+    }
+    
+    /**
+     * Atualiza carga horária
+     */
+    public function update(int $id, array $data): bool
+    {
+        $data['updated_at'] = date('Y-m-d H:i:s');
+        return $this->db->update('cargas_horarias', $data, 'id = :id', [':id' => $id]) > 0;
+    }
+    
+    /**
+     * Deleta carga horária
+     */
+    public function delete(int $id): bool
+    {
+        return $this->db->delete('cargas_horarias', 'id = :id', [':id' => $id]) > 0;
+    }
+    
+    /**
+     * Verifica se carga horária está em uso
+     */
+    public function isInUse(int $id): bool
+    {
+        $sql = "SELECT COUNT(*) FROM alunos WHERE carga_horaria_id = :id AND deleted_at IS NULL";
+        return (int) $this->db->fetchColumn($sql, ['id' => $id]) > 0;
+    }
+    
+    /**
+     * Conta total de cargas horárias
+     */
+    public function count(): int
+    {
+        $sql = "SELECT COUNT(*) FROM cargas_horarias WHERE status = 1";
+        return (int) $this->db->fetchColumn($sql);
+    }
+}

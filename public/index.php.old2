@@ -1,0 +1,92 @@
+<?php
+/**
+ * Planeta Treinamentos - Entry Point
+ * Versão SIMPLIFICADA sem dependência de helpers
+ */
+
+// Definir constantes
+define('PUBLIC_PATH', __DIR__);
+define('ROOT_PATH', dirname(__DIR__));
+
+// Iniciar sessão ANTES de qualquer output
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Configurar error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', '0'); // Não mostrar na tela
+ini_set('log_errors', '1');
+ini_set('error_log', ROOT_PATH . '/storage/logs/php_errors.log');
+
+// Função simples de log
+function logError($message) {
+    $logFile = ROOT_PATH . '/storage/logs/app.log';
+    $logDir = dirname($logFile);
+    if (!is_dir($logDir)) {
+        @mkdir($logDir, 0755, true);
+    }
+    $timestamp = date('Y-m-d H:i:s');
+    @file_put_contents($logFile, "[$timestamp] $message\n", FILE_APPEND);
+}
+
+try {
+    // Carregar autoload do Composer
+    if (!file_exists(ROOT_PATH . '/vendor/autoload.php')) {
+        throw new Exception('Composer autoload não encontrado. Execute: composer install');
+    }
+    
+    require_once ROOT_PATH . '/vendor/autoload.php';
+    
+    // Carregar .env
+    if (file_exists(ROOT_PATH . '/.env')) {
+        $dotenv = Dotenv\Dotenv::createImmutable(ROOT_PATH);
+        $dotenv->load();
+    }
+    
+    // Gerar CSRF token se não existir
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    
+    // Verificar se classe App existe
+    if (!class_exists('PlanetaTreinamentos\Core\App')) {
+        throw new Exception('Classe App não encontrada');
+    }
+    
+    // Iniciar aplicação
+    $app = new PlanetaTreinamentos\Core\App();
+    $app->run();
+    
+} catch (Throwable $e) {
+    // Log do erro
+    logError('ERRO FATAL: ' . $e->getMessage() . ' em ' . $e->getFile() . ':' . $e->getLine());
+    
+    // Mostrar erro amigável
+    http_response_code(500);
+    
+    if (isset($_ENV['APP_DEBUG']) && $_ENV['APP_DEBUG'] === 'true') {
+        // Modo debug - mostrar erro completo
+        echo '<!DOCTYPE html>';
+        echo '<html><head><meta charset="UTF-8"><title>Erro</title>';
+        echo '<style>body{font-family:monospace;padding:20px;background:#f5f5f5}</style></head><body>';
+        echo '<h1>🔴 Erro Fatal</h1>';
+        echo '<div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1)">';
+        echo '<h2>Mensagem:</h2>';
+        echo '<pre>' . htmlspecialchars($e->getMessage()) . '</pre>';
+        echo '<h2>Arquivo:</h2>';
+        echo '<p>' . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . '</p>';
+        echo '<h2>Stack Trace:</h2>';
+        echo '<pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre>';
+        echo '</div></body></html>';
+    } else {
+        // Modo produção - erro genérico
+        echo '<!DOCTYPE html>';
+        echo '<html><head><meta charset="UTF-8"><title>Erro</title>';
+        echo '<style>body{font-family:sans-serif;text-align:center;padding:50px;background:#f5f5f5}</style></head><body>';
+        echo '<h1>⚠️ Erro no Servidor</h1>';
+        echo '<p>Desculpe, ocorreu um erro. Por favor, tente novamente mais tarde.</p>';
+        echo '<p><a href="/">Voltar para a Página Inicial</a></p>';
+        echo '</body></html>';
+    }
+}

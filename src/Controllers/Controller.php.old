@@ -1,0 +1,321 @@
+<?php
+
+namespace PlanetaTreinamentos\Controllers;
+
+use PDO;
+
+/**
+ * Controller Base
+ * Classe pai para todos os controllers
+ */
+abstract class Controller
+{
+    protected PDO $db;
+    protected array $config;
+
+    public function __construct()
+    {
+        // Obter conexão do banco de forma compatível
+        $this->db = $this->getDatabaseConnection();
+        $this->config = $this->getConfig();
+    }
+
+    /**
+     * Obter conexão com banco de dados
+     */
+    private function getDatabaseConnection(): PDO
+    {
+        // Obter variáveis do .env com nomes corretos
+        $host = $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?: 'localhost';
+        $dbname = $_ENV['DB_DATABASE'] ?? getenv('DB_DATABASE') ?: '';
+        $user = $_ENV['DB_USERNAME'] ?? getenv('DB_USERNAME') ?: '';
+        $pass = $_ENV['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?: '';
+        $charset = $_ENV['DB_CHARSET'] ?? getenv('DB_CHARSET') ?: 'utf8mb4';
+
+        try {
+            $dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";
+            $options = [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES $charset"
+            ];
+            
+            $pdo = new PDO($dsn, $user, $pass, $options);
+            return $pdo;
+        } catch (\PDOException $e) {
+            error_log("Erro de conexão com banco: " . $e->getMessage());
+            error_log("DSN usado: mysql:host=$host;dbname=$dbname");
+            throw new \Exception("Erro ao conectar com o banco de dados. Verifique as configurações.");
+        }
+    }
+
+    /**
+     * Renderizar view
+     */
+    protected function render(string $view, array $data = [], ?string $layout = 'app'): void
+    {
+        // Adicionar configuração aos dados
+        $data['config'] = $this->config;
+        $data['this'] = $this; // Para usar métodos helper nas views
+        
+        // Renderizar view
+        extract($data);
+        
+        $viewPath = __DIR__ . '/../../views/' . $view . '.php';
+        
+        if (!file_exists($viewPath)) {
+            error_log("View não encontrada: $viewPath");
+            throw new \Exception("View não encontrada: $view");
+        }
+
+        if ($layout) {
+            $layoutPath = __DIR__ . '/../../views/layouts/' . $layout . '.php';
+            
+            if (!file_exists($layoutPath)) {
+                // Se não encontrar layout, renderizar sem layout
+                error_log("Layout não encontrado, renderizando sem layout: $layoutPath");
+                require $viewPath;
+                return;
+            }
+            
+            // Capturar conteúdo da view
+            ob_start();
+            require $viewPath;
+            $content = ob_get_clean();
+            
+            // Renderizar com layout
+            require $layoutPath;
+        } else {
+            // Renderizar sem layout
+            require $viewPath;
+        }
+    }
+
+    /**
+     * Redirecionar
+     */
+    protected function redirect(string $url, int $statusCode = 302): void
+    {
+        header("Location: $url", true, $statusCode);
+        exit;
+    }
+
+    /**
+     * Retornar JSON
+     */
+    protected function json(array $data, int $statusCode = 200): void
+    {
+        http_response_code($statusCode);
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
+    }
+
+    /**
+     * Obter configurações do banco
+     */
+    protected function getConfig(): array
+    {
+        try {
+            $stmt = $this->db->query("SELECT chave, valor FROM configuracoes");
+            $configs = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+            
+            if (empty($configs)) {
+                return $this->getDefaultConfig();
+            }
+            
+            return $configs;
+        } catch (\PDOException $e) {
+            error_log("Erro ao buscar configurações: " . $e->getMessage());
+            return $this->getDefaultConfig();
+        }
+    }
+
+    /**
+     * Configurações padrão (fallback)
+     */
+    private function getDefaultConfig(): array
+    {
+        $appUrl = $_ENV['APP_URL'] ?? getenv('APP_URL') ?: 'https://planetatreinamentos.com.br';
+        $companyName = $_ENV['COMPANY_NAME'] ?? getenv('COMPANY_NAME') ?: 'Planeta Treinamentos';
+        $companyEmail = $_ENV['COMPANY_EMAIL'] ?? getenv('COMPANY_EMAIL') ?: 'contato@planetatreinamentos.com.br';
+        
+        return [
+            'nome_empresa' => $companyName,
+            'email_admin' => $companyEmail,
+            'email_contato' => $companyEmail,
+            'site_url' => $appUrl,
+            'telefone' => $_ENV['COMPANY_PHONE'] ?? getenv('COMPANY_PHONE') ?: '',
+            'whatsapp' => $_ENV['COMPANY_PHONE'] ?? getenv('COMPANY_PHONE') ?: '',
+            'endereco' => $_ENV['COMPANY_ADDRESS'] ?? getenv('COMPANY_ADDRESS') ?: ''
+        ];
+    }
+
+    /**
+     * Validar CSRF Token
+     */
+    protected function validateCSRF(): bool
+    {
+        $token = $_POST['csrf_token'] ?? '';
+        
+        if (empty($token) || empty($_SESSION['csrf_token'])) {
+            return false;
+        }
+
+        return hash_equals($_SESSION['csrf_token'], $token);
+    }
+
+    /**
+     * Gerar CSRF Token HTML
+     */
+    protected function csrf(): string
+    {
+        if (!isset($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+        
+        $token = $_SESSION['csrf_token'];
+        return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($token) . '">';
+    }
+
+    /**
+     * Verificar se usuário está autenticado
+     */
+    protected function requireAuth(): void
+    {
+        if (!$this->isLoggedIn()) {
+            $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
+            $this->redirect('/login');
+        }
+    }
+
+    /**
+     * Verificar se está logado
+     */
+    protected function isLoggedIn(): bool
+    {
+        return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
+    }
+
+    /**
+     * Obter usuário logado
+     */
+    protected function getUser(): ?array
+    {
+        if (!$this->isLoggedIn()) {
+            return null;
+        }
+
+        try {
+            $stmt = $this->db->prepare("SELECT * FROM usuarios WHERE id = ?");
+            $stmt->execute([$_SESSION['user_id']]);
+            return $stmt->fetch() ?: null;
+        } catch (\PDOException $e) {
+            error_log("Erro ao buscar usuário: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Rate Limiting
+     */
+    protected function checkRateLimit(string $key, int $maxAttempts = 5, int $decayMinutes = 1): bool
+    {
+        $cacheKey = 'rate_limit:' . $key . ':' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        
+        // Implementação simples via sessão
+        if (!isset($_SESSION['rate_limit'])) {
+            $_SESSION['rate_limit'] = [];
+        }
+
+        if (!isset($_SESSION['rate_limit'][$cacheKey])) {
+            $_SESSION['rate_limit'][$cacheKey] = [
+                'attempts' => 0,
+                'reset_time' => time() + ($decayMinutes * 60)
+            ];
+        }
+
+        $rateLimit = &$_SESSION['rate_limit'][$cacheKey];
+
+        // Resetar se passou o tempo
+        if (time() > $rateLimit['reset_time']) {
+            $rateLimit = [
+                'attempts' => 0,
+                'reset_time' => time() + ($decayMinutes * 60)
+            ];
+        }
+
+        // Incrementar tentativas
+        $rateLimit['attempts']++;
+
+        // Verificar se excedeu o limite
+        return $rateLimit['attempts'] <= $maxAttempts;
+    }
+
+    /**
+     * Log de atividades
+     */
+    protected function log(string $message, string $level = 'info', array $context = []): void
+    {
+        $logFile = __DIR__ . '/../../storage/logs/app.log';
+        $logDir = dirname($logFile);
+
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+
+        $timestamp = date('Y-m-d H:i:s');
+        $user = $this->getUser();
+        $userId = $user['id'] ?? 'guest';
+        $contextStr = !empty($context) ? json_encode($context) : '';
+
+        $logMessage = "[$timestamp] [$level] [User: $userId] $message $contextStr\n";
+        
+        @file_put_contents($logFile, $logMessage, FILE_APPEND);
+    }
+
+    /**
+     * Validar dados
+     */
+    protected function validate(array $data, array $rules): array
+    {
+        $errors = [];
+
+        foreach ($rules as $field => $rule) {
+            $ruleList = is_array($rule) ? $rule : explode('|', $rule);
+
+            foreach ($ruleList as $r) {
+                // Required
+                if ($r === 'required' && empty($data[$field])) {
+                    $errors[$field][] = "O campo $field é obrigatório";
+                }
+
+                // Email
+                if ($r === 'email' && !empty($data[$field])) {
+                    if (!filter_var($data[$field], FILTER_VALIDATE_EMAIL)) {
+                        $errors[$field][] = "Email inválido";
+                    }
+                }
+
+                // Min length
+                if (strpos($r, 'min:') === 0) {
+                    $min = (int)substr($r, 4);
+                    if (!empty($data[$field]) && strlen($data[$field]) < $min) {
+                        $errors[$field][] = "Mínimo de $min caracteres";
+                    }
+                }
+
+                // Max length
+                if (strpos($r, 'max:') === 0) {
+                    $max = (int)substr($r, 4);
+                    if (!empty($data[$field]) && strlen($data[$field]) > $max) {
+                        $errors[$field][] = "Máximo de $max caracteres";
+                    }
+                }
+            }
+        }
+
+        return $errors;
+    }
+}

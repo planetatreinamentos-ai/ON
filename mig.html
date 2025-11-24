@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migração de Dados - Planeta Treinamentos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .config-section {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .config-section h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .form-group input {
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-card h3 {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .number {
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-test {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            padding: 10px 25px;
+            font-size: 0.9em;
+            margin-right: 10px;
+        }
+
+        .btn-test:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .buttons-container {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            margin: 30px 0;
+        }
+
+        .progress-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .progress-section.active {
+            display: block;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .progress-header h3 {
+            color: #2d3748;
+            font-size: 1.2em;
+        }
+
+        .progress-percentage {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .progress-bar-container {
+            background: #e2e8f0;
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .log-container {
+            background: #1a202c;
+            color: #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid #2d3748;
+            animation: slideIn 0.3s ease;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-success {
+            color: #10b981;
+        }
+
+        .log-error {
+            color: #ef4444;
+        }
+
+        .log-info {
+            color: #3b82f6;
+        }
+
+        .log-warning {
+            color: #f59e0b;
+        }
+
+        .timestamp {
+            color: #718096;
+            margin-right: 10px;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .connection-status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-testing {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 5px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .summary-section {
+            background: #f0fdf4;
+            border: 2px solid #86efac;
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 30px;
+            display: none;
+        }
+
+        .summary-section.active {
+            display: block;
+        }
+
+        .summary-section h3 {
+            color: #065f46;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #10b981;
+        }
+
+        .summary-item strong {
+            color: #065f46;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .summary-item span {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Sistema de Migração de Dados</h1>
+            <p>Planeta Treinamentos - Banco Antigo → Banco Novo</p>
+        </div>
+
+        <div class="content">
+            <!-- Configuração Banco Antigo -->
+            <div class="config-section">
+                <h2>🗄️ Banco de Dados Antigo</h2>
+                <div class="config-grid">
+                    <div class="form-group">
+                        <label>Host</label>
+                        <input type="text" id="old_host" value="localhost">
+                    </div>
+                    <div class="form-group">
+                        <label>Porta</label>
+                        <input type="text" id="old_port" value="3306">
+                    </div>
+                    <div class="form-group">
+                        <label>Banco de Dados</label>
+                        <input type="text" id="old_database" value="u220553158_aluno">
+                    </div>
+                    <div class="form-group">
+                        <label>Usuário</label>
+                        <input type="text" id="old_username" value="root">
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" id="old_password" value="">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <span id="old_status" class="connection-status">Não testado</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuração Banco Novo -->
+            <div class="config-section">
+                <h2>🆕 Banco de Dados Novo</h2>
+                <div class="config-grid">
+                    <div class="form-group">
+                        <label>Host</label>
+                        <input type="text" id="new_host" value="localhost">
+                    </div>
+                    <div class="form-group">
+                        <label>Porta</label>
+                        <input type="text" id="new_port" value="3306">
+                    </div>
+                    <div class="form-group">
+                        <label>Banco de Dados</label>
+                        <input type="text" id="new_database" value="planetatreinamentos_novo">
+                    </div>
+                    <div class="form-group">
+                        <label>Usuário</label>
+                        <input type="text" id="new_username" value="root">
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" id="new_password" value="">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <span id="new_status" class="connection-status">Não testado</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estatísticas -->
+            <div class="stats-grid" id="stats" style="display: none;">
+                <div class="stat-card">
+                    <h3>Professores</h3>
+                    <div class="number" id="stat_professores">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Cursos</h3>
+                    <div class="number" id="stat_cursos">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Cargas Horárias</h3>
+                    <div class="number" id="stat_cargas">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Alunos</h3>
+                    <div class="number" id="stat_alunos">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Histórico</h3>
+                    <div class="number" id="stat_historico">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Pré-cadastros</h3>
+                    <div class="number" id="stat_precadastros">0</div>
+                </div>
+            </div>
+
+            <!-- Botões -->
+            <div class="buttons-container">
+                <button class="btn btn-test" onclick="testConnections()">
+                    🔌 Testar Conexões
+                </button>
+                <button class="btn btn-primary" id="btnMigrar" onclick="startMigration()" disabled>
+                    🚀 Iniciar Migração
+                </button>
+            </div>
+
+            <!-- Progresso -->
+            <div class="progress-section" id="progressSection">
+                <div class="progress-header">
+                    <h3>Progresso da Migração</h3>
+                    <span class="progress-percentage" id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                </div>
+
+                <div class="log-container" id="logContainer"></div>
+            </div>
+
+            <!-- Resumo -->
+            <div class="summary-section" id="summarySection">
+                <h3>✅ Migração Concluída com Sucesso!</h3>
+                <div class="summary-grid" id="summaryGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let migrationInProgress = false;
+        let totalRecords = 0;
+        let processedRecords = 0;
+
+        function getConfig() {
+            return {
+                old_db: {
+                    host: document.getElementById('old_host').value,
+                    port: document.getElementById('old_port').value,
+                    database: document.getElementById('old_database').value,
+                    username: document.getElementById('old_username').value,
+                    password: document.getElementById('old_password').value
+                },
+                new_db: {
+                    host: document.getElementById('new_host').value,
+                    port: document.getElementById('new_port').value,
+                    database: document.getElementById('new_database').value,
+                    username: document.getElementById('new_username').value,
+                    password: document.getElementById('new_password').value
+                }
+            };
+        }
+
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.innerHTML = `<span class="timestamp">[${timestamp}]</span>${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function updateProgress(current, total) {
+            processedRecords = current;
+            totalRecords = total;
+            const percent = Math.round((current / total) * 100);
+            
+            document.getElementById('progressPercent').textContent = percent + '%';
+            document.getElementById('progressBar').style.width = percent + '%';
+        }
+
+        async function testConnections() {
+            const oldStatus = document.getElementById('old_status');
+            const newStatus = document.getElementById('new_status');
+            
+            oldStatus.innerHTML = '<span class="spinner"></span>Testando...';
+            oldStatus.className = 'connection-status status-testing';
+            newStatus.innerHTML = '<span class="spinner"></span>Testando...';
+            newStatus.className = 'connection-status status-testing';
+
+            try {
+                const config = getConfig();
+                
+                // Log da configuração (sem senhas)
+                console.log('Configuração:', {
+                    old_db: {...config.old_db, password: '***'},
+                    new_db: {...config.new_db, password: '***'}
+                });
+                
+                const response = await fetch('migrate_backend.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'test_connections',
+                        config: config
+                    })
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                const text = await response.text();
+                console.log('Response text:', text);
+                
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch(e) {
+                    console.error('Erro ao parsear JSON:', e);
+                    throw new Error('Resposta inválida do servidor. Verifique o console.');
+                }
+                
+                console.log('Resultado:', result);
+                
+                if (result.old_db.success) {
+                    oldStatus.textContent = '✓ Conectado';
+                    oldStatus.className = 'connection-status status-success';
+                } else {
+                    oldStatus.textContent = '✗ ' + (result.old_db.error || 'Erro desconhecido');
+                    oldStatus.className = 'connection-status status-error';
+                    console.error('Erro banco antigo:', result.old_db.error);
+                }
+
+                if (result.new_db.success) {
+                    newStatus.textContent = '✓ Conectado';
+                    newStatus.className = 'connection-status status-success';
+                } else {
+                    newStatus.textContent = '✗ ' + (result.new_db.error || 'Erro desconhecido');
+                    newStatus.className = 'connection-status status-error';
+                    console.error('Erro banco novo:', result.new_db.error);
+                }
+
+                if (result.old_db.success && result.new_db.success) {
+                    document.getElementById('btnMigrar').disabled = false;
+                    await loadStats();
+                }
+            } catch (error) {
+                console.error('Erro completo:', error);
+                oldStatus.textContent = '✗ Erro: ' + error.message;
+                oldStatus.className = 'connection-status status-error';
+                newStatus.textContent = '✗ Erro: ' + error.message;
+                newStatus.className = 'connection-status status-error';
+                
+                alert('Erro ao testar conexões:\n\n' + error.message + '\n\nVerifique o console do navegador (F12) para mais detalhes.');
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('migrate_backend.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'get_stats',
+                        config: getConfig()
+                    })
+                });
+
+                const stats = await response.json();
+                
+                document.getElementById('stat_professores').textContent = stats.professores || 0;
+                document.getElementById('stat_cursos').textContent = stats.cursos || 0;
+                document.getElementById('stat_cargas').textContent = stats.cargas || 0;
+                document.getElementById('stat_alunos').textContent = stats.alunos || 0;
+                document.getElementById('stat_historico').textContent = stats.historico || 0;
+                document.getElementById('stat_precadastros').textContent = stats.precadastros || 0;
+                
+                document.getElementById('stats').style.display = 'grid';
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+            }
+        }
+
+        async function startMigration() {
+            if (migrationInProgress) return;
+            
+            if (!confirm('Deseja iniciar a migração? Este processo pode levar alguns minutos.')) {
+                return;
+            }
+
+            migrationInProgress = true;
+            document.getElementById('btnMigrar').disabled = true;
+            document.getElementById('progressSection').classList.add('active');
+            document.getElementById('logContainer').innerHTML = '';
+            
+            addLog('🚀 Iniciando processo de migração...', 'info');
+
+            try {
+                // Migrar cada tabela sequencialmente
+                await migrateTable('professores');
+                await migrateTable('cursos');
+                await migrateTable('cargas');
+                await migrateTable('alunos');
+                await migrateTable('historico');
+                await migrateTable('precadastros');
+                
+                addLog('✅ Migração concluída com sucesso!', 'success');
+                showSummary();
+            } catch (error) {
+                addLog('❌ Erro na migração: ' + error.message, 'error');
+            } finally {
+                migrationInProgress = false;
+                document.getElementById('btnMigrar').disabled = false;
+            }
+        }
+
+        async function migrateTable(table) {
+            addLog(`📊 Iniciando migração de ${table}...`, 'info');
+            
+            const response = await fetch('migrate_backend.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    action: 'migrate_table',
+                    table: table,
+                    config: getConfig()
+                })
+            });
+
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error);
+            }
+
+            const total = result.total;
+            
+            for (let i = 0; i < total; i++) {
+                const batchResponse = await fetch('migrate_backend.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'migrate_record',
+                        table: table,
+                        index: i,
+                        config: getConfig()
+                    })
+                });
+
+                const batchResult = await batchResponse.json();
+                
+                if (batchResult.success) {
+                    addLog(`✓ ${table}: ${batchResult.message}`, 'success');
+                } else {
+                    addLog(`⚠ ${table}: ${batchResult.error}`, 'warning');
+                }
+
+                // Atualizar progresso
+                const currentTotal = totalRecords + i + 1;
+                updateProgress(currentTotal, totalRecords + total);
+                
+                // Aguardar 2 segundos
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+
+            totalRecords += total;
+            addLog(`✅ ${table}: ${total} registros migrados`, 'success');
+        }
+
+        function showSummary() {
+            const summarySection = document.getElementById('summarySection');
+            const summaryGrid = document.getElementById('summaryGrid');
+            
+            summaryGrid.innerHTML = `
+                <div class="summary-item">
+                    <strong>Professores</strong>
+                    <span>${document.getElementById('stat_professores').textContent}</span>
+                </div>
+                <div class="summary-item">
+                    <strong>Cursos</strong>
+                    <span>${document.getElementById('stat_cursos').textContent}</span>
+                </div>
+                <div class="summary-item">
+                    <strong>Cargas Horárias</strong>
+                    <span>${document.getElementById('stat_cargas').textContent}</span>
+                </div>
+                <div class="summary-item">
+                    <strong>Alunos</strong>
+                    <span>${document.getElementById('stat_alunos').textContent}</span>
+                </div>
+                <div class="summary-item">
+                    <strong>Histórico</strong>
+                    <span>${document.getElementById('stat_historico').textContent}</span>
+                </div>
+                <div class="summary-item">
+                    <strong>Pré-cadastros</strong>
+                    <span>${document.getElementById('stat_precadastros').textContent}</span>
+                </div>
+            `;
+            
+            summarySection.classList.add('active');
+        }
+    </script>
+</body>
+</html>

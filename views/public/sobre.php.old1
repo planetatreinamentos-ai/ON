@@ -1,0 +1,347 @@
+<?php
+/**
+ * Página Sobre - Planeta Treinamentos
+ */
+
+$config = $config ?? [];
+$estatisticas = $estatisticas ?? [
+    'total_alunos' => 0,
+    'total_cursos' => 0,
+    'total_professores' => 0,
+    'anos_experiencia' => 0
+];
+?>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sobre - Planeta Treinamentos</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- CSS Customizado -->
+    <link rel="stylesheet" href="/assets/css/public.css">
+    
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+        }
+        
+        .hero-about {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 100px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .timeline {
+            position: relative;
+            padding-left: 50px;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--primary-color);
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 30px;
+        }
+        
+        .timeline-icon {
+            position: absolute;
+            left: -38px;
+            width: 40px;
+            height: 40px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold text-primary" href="/#">
+            <i class="fas fa-graduation-cap me-2"></i>
+            Planeta Treinamentos
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/#cursos">
+                        <i class="fas fa-book me-1"></i>Cursos
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/#professores">
+                        <i class="fas fa-chalkboard-teacher me-1"></i>Professores
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/#alunos">
+                        <i class="fas fa-users me-1"></i>Alunos
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/#contato">
+                        <i class="fas fa-paper-plane me-1"></i>Contato
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="/sobre">
+                        <i class="fas fa-info-circle me-1"></i>Sobre
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero-about">
+    <div class="container text-center">
+        <h1 class="display-3 fw-bold mb-4">Sobre Nós</h1>
+        <p class="lead">Formando profissionais qualificados desde <?= date('Y') - ($estatisticas['anos_experiencia'] ?? 0) ?></p>
+    </div>
+</section>
+
+<!-- Estatísticas -->
+<section class="py-5" style="margin-top: -50px;">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number"><?= number_format($estatisticas['total_alunos']) ?>+</div>
+                    <p class="text-muted mb-0">Alunos Formados</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number"><?= $estatisticas['total_cursos'] ?></div>
+                    <p class="text-muted mb-0">Cursos Oferecidos</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number"><?= $estatisticas['total_professores'] ?></div>
+                    <p class="text-muted mb-0">Professores</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number"><?= $estatisticas['anos_experiencia'] ?>+</div>
+                    <p class="text-muted mb-0">Anos de Experiência</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Nossa História -->
+<section class="py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <h2 class="display-5 fw-bold mb-4">Nossa História</h2>
+                <p class="lead">
+                    O Planeta Treinamentos nasceu da paixão por ensinar e formar profissionais qualificados 
+                    na área de manutenção de smartphones.
+                </p>
+                <p>
+                    Com mais de <?= $estatisticas['anos_experiencia'] ?> anos de experiência, nos tornamos referência 
+                    no mercado, formando <?= number_format($estatisticas['total_alunos']) ?>+ alunos que hoje atuam 
+                    com sucesso em todo o Brasil.
+                </p>
+                <p>
+                    Nossa missão é proporcionar educação de qualidade, com certificação reconhecida, 
+                    preparando nossos alunos para os desafios do mercado de trabalho.
+                </p>
+            </div>
+            <div class="col-lg-6">
+                <div class="p-5 rounded" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);">
+                    <div class="text-white text-center">
+                        <i class="fas fa-award fa-5x mb-3"></i>
+                        <h3 class="fw-bold">Certificação Reconhecida</h3>
+                        <p>Nossos certificados são amplamente reconhecidos no mercado</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Missão, Visão e Valores -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center display-5 fw-bold mb-5">Nossos Pilares</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-bullseye fa-3x text-primary"></i>
+                        </div>
+                        <h4 class="fw-bold">Missão</h4>
+                        <p>
+                            Formar profissionais qualificados e preparados para o mercado de trabalho,
+                            oferecendo educação de excelência e certificação reconhecida.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-eye fa-3x text-primary"></i>
+                        </div>
+                        <h4 class="fw-bold">Visão</h4>
+                        <p>
+                            Ser referência nacional em cursos profissionalizantes de manutenção de smartphones,
+                            reconhecidos pela qualidade e excelência no ensino.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-heart fa-3x text-primary"></i>
+                        </div>
+                        <h4 class="fw-bold">Valores</h4>
+                        <p>
+                            Excelência, Comprometimento, Ética, Inovação e Respeito são os valores 
+                            que guiam nossas ações e decisões diariamente.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Diferenciais -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center display-5 fw-bold mb-5">Nossos Diferenciais</h2>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-certificate fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold">Certificado Reconhecido</h5>
+                    <p class="text-muted">Certificação digital com QR Code</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-users fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold">Professores Qualificados</h5>
+                    <p class="text-muted">Profissionais experientes do mercado</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-tools fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold">Prática Intensiva</h5>
+                    <p class="text-muted">Foco em exercícios práticos</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-handshake fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold">Suporte Contínuo</h5>
+                    <p class="text-muted">Acompanhamento durante e após o curso</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="py-5 bg-primary text-white">
+    <div class="container text-center">
+        <h2 class="display-5 fw-bold mb-3">Faça Parte da Nossa História</h2>
+        <p class="lead mb-4">Junte-se aos <?= number_format($estatisticas['total_alunos']) ?>+ alunos que já transformaram suas carreiras</p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a href="/#interesse" class="btn btn-light btn-lg">
+                <i class="fas fa-paper-plane me-2"></i>Inscreva-se Agora
+            </a>
+            <!--<a href="/#contato" class="btn btn-outline-light btn-lg">-->
+                <!--<i class="fas fa-phone me-2"></i>Entre em Contato-->
+            <!--</a>-->
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="bg-dark text-white py-4">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                <p class="mb-0">&copy; <?= date('Y') ?> Planeta Treinamentos. Todos os direitos reservados.</p>
+            </div>
+            <div class="col-md-6 text-center text-md-end">
+                <a href="/admin" class="text-white-50 text-decoration-none me-3">
+                    <i class="fas fa-lock me-1"></i>Área Administrativa
+                </a>
+                <a href="#" class="text-white me-3"><i class="fab fa-facebook fa-lg"></i></a>
+                <a href="#" class="text-white me-3"><i class="fab fa-instagram fa-lg"></i></a>
+                <a href="#" class="text-white"><i class="fab fa-whatsapp fa-lg"></i></a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

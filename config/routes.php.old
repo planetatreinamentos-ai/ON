@@ -1,0 +1,45 @@
+<?php
+/**
+ * Definição de Rotas
+ * 
+ * Arquivo central de rotas da aplicação
+ * 
+ * @package PlanetaTreinamentos
+ * @since 1.0
+ */
+
+use PlanetaTreinamentos\Core\Router;
+
+$router = new Router();
+
+// =====================================================
+// ROTAS PÚBLICAS (sem autenticação)
+// =====================================================
+
+// Autenticação
+$router->get('/login', 'AuthController@showLogin');
+$router->post('/login', 'AuthController@login');
+$router->get('/logout', 'AuthController@logout');
+$router->get('/esqueci-senha', 'AuthController@showForgotPassword');
+$router->post('/esqueci-senha', 'AuthController@forgotPassword');
+$router->get('/redefinir-senha/{token}', 'AuthController@showResetPassword');
+$router->post('/redefinir-senha', 'AuthController@resetPassword');
+
+// =====================================================
+// ROTAS ADMINISTRATIVAS (requerem autenticação)
+// =====================================================
+
+// Dashboard
+$router->get('/admin', 'DashboardController@index', ['Auth']);
+$router->get('/admin/dashboard', 'DashboardController@index', ['Auth']);
+
+// Configurações White-label
+$router->get('/admin/configuracoes', 'ConfigController@index', ['auth']);
+$router->post('/admin/configuracoes', 'ConfigController@update', ['auth']);
+$router->post('/admin/configuracoes/logo', 'ConfigController@uploadLogo', ['auth']);
+
+// =====================================================
+// RETORNAR ROUTER
+// =====================================================
+
+return $router;

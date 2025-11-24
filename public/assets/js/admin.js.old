@@ -1,0 +1,192 @@
+/**
+ * JavaScript Administrativo - Planeta Treinamentos
+ * 
+ * Scripts para o painel administrativo
+ */
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle Sidebar
+    const sidebarCollapse = document.getElementById('sidebarCollapse');
+    const sidebar = document.getElementById('sidebar');
+    const content = document.getElementById('content');
+    
+    if (sidebarCollapse) {
+        sidebarCollapse.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+            content.classList.toggle('active');
+        });
+    }
+    
+    // Fecha sidebar em mobile ao clicar em link
+    if (window.innerWidth <= 768) {
+        document.querySelectorAll('.sidebar a').forEach(link => {
+            link.addEventListener('click', function() {
+                sidebar.classList.add('active');
+                content.classList.remove('active');
+            });
+        });
+    }
+    
+    // Marca item ativo no menu
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('.sidebar a').forEach(link => {
+        if (link.getAttribute('href') === currentPath) {
+            link.classList.add('active');
+            // Expande submenu pai se existir
+            const parentCollapse = link.closest('.collapse');
+            if (parentCollapse) {
+                parentCollapse.classList.add('show');
+            }
+        }
+    });
+    
+    // Preview de imagem em uploads
+    document.querySelectorAll('input[type="file"][data-preview]').forEach(input => {
+        input.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const previewId = this.dataset.preview;
+            const preview = document.getElementById(previewId);
+            
+            if (file && preview) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    });
+    
+    // Auto-submit de formulários com select
+    document.querySelectorAll('select[data-auto-submit]').forEach(select => {
+        select.addEventListener('change', function() {
+            this.closest('form').submit();
+        });
+    });
+});
+
+// Admin utilities
+const Admin = {
+    /**
+     * Inicializa DataTable
+     */
+    initDataTable(selector, options = {}) {
+        const defaultOptions = {
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json'
+            },
+            responsive: true,
+            pageLength: 25,
+            order: [[0, 'desc']]
+        };
+        
+        return $(selector).DataTable({...defaultOptions, ...options});
+    },
+    
+    /**
+     * Confirmação de exclusão
+     */
+    async confirmDelete(url, message = 'Tem certeza que deseja excluir este registro?') {
+        const result = await Swal.fire({
+            title: 'Atenção!',
+            text: message,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sim, excluir!',
+            cancelButtonText: 'Cancelar'
+        });
+        
+        if (result.isConfirmed) {
+            App.showLoading();
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                
+                const data = await response.json();
+                
+                App.hideLoading();
+                
+                if (data.success) {
+                    await Swal.fire('Sucesso!', data.message || 'Registro excluído com sucesso!', 'success');
+                    window.location.reload();
+                } else {
+                    Swal.fire('Erro!', data.message || 'Erro ao excluir registro.', 'error');
+                }
+            } catch (error) {
+                App.hideLoading();
+                Swal.fire('Erro!', 'Erro ao processar requisição.', 'error');
+            }
+        }
+    },
+    
+    /**
+     * Requisição AJAX
+     */
+    async request(url, method = 'GET', data = null) {
+        App.showLoading();
+        
+        try {
+            const options = {
+                method: method,
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Content-Type': 'application/json'
+                }
+            };
+            
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+            
+            const response = await fetch(url, options);
+            const result = await response.json();
+            
+            App.hideLoading();
+            
+            return result;
+        } catch (error) {
+            App.hideLoading();
+            throw error;
+        }
+    },
+    
+    /**
+     * Validação de formulário
+     */
+    validateForm(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return false;
+        
+        let isValid = true;
+        
+        // Remove mensagens de erro anteriores
+        form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        
+        // Valida campos obrigatórios
+        form.querySelectorAll('[required]').forEach(field => {
+            if (!field.value.trim()) {
+                isValid = false;
+                field.classList.add('is-invalid');
+                
+                const feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback';
+                feedback.textContent = 'Este campo é obrigatório';
+                field.parentNode.appendChild(feedback);
+            }
+        });
+        
+        return isValid;
+    }
+};
+
+// Exporta para uso global
+window.Admin = Admin;

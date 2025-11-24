@@ -1,0 +1,265 @@
+<?php
+/**
+ * Controller de Alunos
+ * 
+ * CRUD completo de alunos
+ * 
+ * @package PlanetaTreinamentos\Controllers
+ * @since 1.0
+ */
+
+namespace PlanetaTreinamentos\Controllers;
+
+use PlanetaTreinamentos\Core\View;
+use PlanetaTreinamentos\Core\Session;
+use PlanetaTreinamentos\Core\CSRF;
+use PlanetaTreinamentos\Models\Aluno;
+use PlanetaTreinamentos\Models\Curso;
+use PlanetaTreinamentos\Models\Professor;
+use PlanetaTreinamentos\Models\CargaHoraria;
+use PlanetaTreinamentos\Helpers\Validator;
+use PlanetaTreinamentos\Helpers\Logger;
+
+class AlunoController
+{
+    private Aluno $alunoModel;
+    private Curso $cursoModel;
+    private Professor $professorModel;
+    private CargaHoraria $cargaHorariaModel;
+    
+    public function __construct()
+    {
+        $this->alunoModel = new Aluno();
+        $this->cursoModel = new Curso();
+        $this->professorModel = new Professor();
+        $this->cargaHorariaModel = new CargaHoraria();
+    }
+    
+    /**
+     * Lista todos os alunos
+     */
+    public function index(): void
+    {
+        $alunos = $this->alunoModel->all();
+        
+        View::make('alunos/index', [
+            'pageTitle' => 'Alunos',
+            'alunos' => $alunos
+        ], 'admin');
+    }
+    
+    /**
+     * Formulário de criação
+     */
+    public function create(): void
+    {
+        $cursos = $this->cursoModel->all();
+        $professores = $this->professorModel->all();
+        $cargasHorarias = $this->cargaHorariaModel->all();
+        
+        View::make('alunos/create', [
+            'pageTitle' => 'Novo Aluno',
+            'cursos' => $cursos,
+            'professores' => $professores,
+            'cargasHorarias' => $cargasHorarias
+        ], 'admin');
+    }
+    
+    /**
+     * Salva novo aluno
+     */
+    public function store(): void
+    {
+        CSRF::check();
+        
+        $validator = new Validator($_POST);
+        $validator
+            ->required('nome', 'Nome é obrigatório')
+            ->max('nome', 255, 'Nome muito longo')
+            ->required('email', 'Email é obrigatório')
+            ->email('email', 'Email inválido')
+            ->required('curso_id', 'Curso é obrigatório')
+            ->required('professor_id', 'Professor é obrigatório')
+            ->required('carga_horaria_id', 'Carga horária é obrigatória')
+            ->required('data_inicio', 'Data de início é obrigatória')
+            ->required('data_conclusao', 'Data de conclusão é obrigatória');
+        
+        if ($validator->fails()) {
+            Session::error($validator->firstError());
+            back();
+        }
+        
+        try {
+            // Gera alunoId único
+            $alunoid = $this->alunoModel->generateUniqueAlunoId();
+            
+            $data = [
+                'alunoid' => $alunoid,
+                'nome' => Validator::sanitizeString($_POST['nome']),
+                'email' => Validator::sanitizeEmail($_POST['email']),
+                'whatsapp' => Validator::sanitizeString($_POST['whatsapp'] ?? ''),
+                'curso_id' => Validator::sanitizeInt($_POST['curso_id']),
+                'professor_id' => Validator::sanitizeInt($_POST['professor_id']),
+                'carga_horaria_id' => Validator::sanitizeInt($_POST['carga_horaria_id']),
+                'data_inicio' => $_POST['data_inicio'],
+                'data_conclusao' => $_POST['data_conclusao'],
+                'nota' => isset($_POST['nota']) ? Validator::sanitizeNumber($_POST['nota']) : null,
+                'melhor_aluno' => isset($_POST['melhor_aluno']) ? 1 : 0,
+                'certificado_emitido' => 0
+            ];
+            
+            // Upload da foto
+            if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
+                $foto = uploadFile($_FILES['foto'], 'alunos', ['jpg', 'jpeg', 'png', 'webp']);
+                if ($foto) {
+                    $data['foto'] = $foto;
+                }
+            }
+            
+            $id = $this->alunoModel->create($data);
+            
+            // Se marcou como melhor aluno, atualiza
+            if ($data['melhor_aluno']) {
+                $this->alunoModel->setMelhorAluno($id, $data['curso_id']);
+            }
+            
+            Logger::audit('Aluno criado', ['id' => $id, 'nome' => $data['nome'], 'alunoid' => $alunoid]);
+            
+            Session::success('Aluno cadastrado com sucesso! ID: ' . $alunoid);
+            redirect('/admin/alunos');
+            
+        } catch (\Exception $e) {
+            Logger::error('Erro ao criar aluno: ' . $e->getMessage());
+            Session::error('Erro ao cadastrar aluno.');
+            back();
+        }
+    }
+    
+    /**
+     * Formulário de edição
+     */
+    public function edit(string $id): void
+    {
+        $aluno = $this->alunoModel->findById((int)$id);
+        
+        if (!$aluno) {
+            Session::error('Aluno não encontrado.');
+            redirect('/admin/alunos');
+        }
+        
+        $cursos = $this->cursoModel->all();
+        $professores = $this->professorModel->all();
+        $cargasHorarias = $this->cargaHorariaModel->all();
+        
+        View::make('alunos/edit', [
+            'pageTitle' => 'Editar Aluno',
+            'aluno' => $aluno,
+            'cursos' => $cursos,
+            'professores' => $professores,
+            'cargasHorarias' => $cargasHorarias
+        ], 'admin');
+    }
+    
+    /**
+     * Atualiza aluno
+     */
+    public function update(string $id): void
+    {
+        CSRF::check();
+        
+        $aluno = $this->alunoModel->findById((int)$id);
+        
+        if (!$aluno) {
+            Session::error('Aluno não encontrado.');
+            redirect('/admin/alunos');
+        }
+        
+        $validator = new Validator($_POST);
+        $validator
+            ->required('nome', 'Nome é obrigatório')
+            ->max('nome', 255, 'Nome muito longo')
+            ->required('email', 'Email é obrigatório')
+            ->email('email', 'Email inválido')
+            ->required('curso_id', 'Curso é obrigatório')
+            ->required('professor_id', 'Professor é obrigatório')
+            ->required('carga_horaria_id', 'Carga horária é obrigatória')
+            ->required('data_inicio', 'Data de início é obrigatória')
+            ->required('data_conclusao', 'Data de conclusão é obrigatória');
+        
+        if ($validator->fails()) {
+            Session::error($validator->firstError());
+            back();
+        }
+        
+        try {
+            $data = [
+                'nome' => Validator::sanitizeString($_POST['nome']),
+                'email' => Validator::sanitizeEmail($_POST['email']),
+                'whatsapp' => Validator::sanitizeString($_POST['whatsapp'] ?? ''),
+                'curso_id' => Validator::sanitizeInt($_POST['curso_id']),
+                'professor_id' => Validator::sanitizeInt($_POST['professor_id']),
+                'carga_horaria_id' => Validator::sanitizeInt($_POST['carga_horaria_id']),
+                'data_inicio' => $_POST['data_inicio'],
+                'data_conclusao' => $_POST['data_conclusao'],
+                'nota' => isset($_POST['nota']) ? Validator::sanitizeNumber($_POST['nota']) : null,
+                'melhor_aluno' => isset($_POST['melhor_aluno']) ? 1 : 0
+            ];
+            
+            // Upload da foto (se houver)
+            if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
+                // Remove foto antiga
+                if ($aluno['foto']) {
+                    deleteFile($aluno['foto']);
+                }
+                
+                $foto = uploadFile($_FILES['foto'], 'alunos', ['jpg', 'jpeg', 'png', 'webp']);
+                if ($foto) {
+                    $data['foto'] = $foto;
+                }
+            }
+            
+            $this->alunoModel->update((int)$id, $data);
+            
+            // Atualiza melhor aluno se necessário
+            if ($data['melhor_aluno']) {
+                $this->alunoModel->setMelhorAluno((int)$id, $data['curso_id']);
+            }
+            
+            Logger::audit('Aluno atualizado', ['id' => $id, 'nome' => $data['nome']]);
+            
+            Session::success('Aluno atualizado com sucesso!');
+            redirect('/admin/alunos');
+            
+        } catch (\Exception $e) {
+            Logger::error('Erro ao atualizar aluno: ' . $e->getMessage());
+            Session::error('Erro ao atualizar aluno.');
+            back();
+        }
+    }
+    
+    /**
+     * Deleta aluno (soft delete)
+     */
+    public function delete(string $id): void
+    {
+        CSRF::check();
+        
+        $aluno = $this->alunoModel->findById((int)$id);
+        
+        if (!$aluno) {
+            jsonResponse(['success' => false, 'message' => 'Aluno não encontrado.'], 404);
+        }
+        
+        try {
+            $this->alunoModel->delete((int)$id);
+            
+            Logger::audit('Aluno deletado (soft delete)', ['id' => $id, 'nome' => $aluno['nome']]);
+            
+            jsonResponse(['success' => true, 'message' => 'Aluno excluído com sucesso!']);
+            
+        } catch (\Exception $e) {
+            Logger::error('Erro ao deletar aluno: ' . $e->getMessage());
+            jsonResponse(['success' => false, 'message' => 'Erro ao excluir aluno.'], 500);
+        }
+    }
+}

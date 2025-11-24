@@ -1,0 +1,449 @@
+<?php
+/**
+ * Homepage Pública
+ * Seções: Hero, Cursos, Professores, Alunos Formados, Formulário de Interesse
+ */
+
+// Buscar dados para a página
+$cursos = $cursos ?? [];
+$professores = $professores ?? [];
+$alunosDestaque = $alunosDestaque ?? [];
+$estatisticas = $estatisticas ?? [];
+
+$currentPage = 'home';
+?>
+
+<?php include __DIR__ . '/includes/meta-tags.php'; ?>
+<?php include __DIR__ . '/includes/header.php'; ?>
+
+<!-- Hero Section -->
+<section class="hero-section d-flex align-items-center" style="min-height: 600px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 text-white" data-aos="fade-right">
+                <h1 class="display-3 fw-bold mb-4">
+                    <?= htmlspecialchars($config['titulo_hero'] ?? 'Transforme sua carreira') ?>
+                </h1>
+                <p class="lead mb-4">
+                    <?= htmlspecialchars($config['subtitulo_hero'] ?? 'Aprenda com os melhores profissionais e conquiste seu certificado') ?>
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="#cursos" class="btn btn-light btn-lg">
+                        <i class="fas fa-graduation-cap me-2"></i>Ver Cursos
+                    </a>
+                    <a href="#interesse" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-pencil-alt me-2"></i>Inscreva-se
+                    </a>
+                </div>
+                
+                <!-- Estatísticas -->
+                <?php if (!empty($estatisticas)): ?>
+                <div class="row mt-5">
+                    <div class="col-4">
+                        <h3 class="fw-bold mb-0"><?= number_format($estatisticas['total_alunos'] ?? 0) ?>+</h3>
+                        <p class="mb-0">Alunos Formados</p>
+                    </div>
+                    <div class="col-4">
+                        <h3 class="fw-bold mb-0"><?= $estatisticas['total_turmas'] ?? 0 ?>+</h3>
+                        <p class="mb-0">Turmas</p>
+                    </div>
+                    <div class="col-4">
+                        <h3 class="fw-bold mb-0"><?= $estatisticas['anos_experiencia'] ?? 0 ?>+</h3>
+                        <p class="mb-0">Anos</p>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+            
+            <div class="col-lg-6" data-aos="fade-left">
+                <?php if (!empty($config['imagem_hero'])): ?>
+                <img src="<?= htmlspecialchars($config['imagem_hero']) ?>" 
+                     alt="Hero Image" 
+                     class="img-fluid rounded shadow-lg">
+                <?php else: ?>
+                <div class="bg-white p-5 rounded shadow-lg text-center">
+                    <i class="fas fa-graduation-cap fa-5x text-primary mb-3"></i>
+                    <h3>Seu Futuro Começa Aqui</h3>
+                    <p class="text-muted">Certificação profissional reconhecida no mercado</p>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Cursos Section -->
+<section id="cursos" class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <h2 class="display-4 fw-bold">Nossos Cursos</h2>
+            <p class="lead text-muted">Conheça os cursos que vão transformar sua carreira</p>
+        </div>
+
+        <?php if (!empty($cursos)): ?>
+        <div class="row g-4">
+            <?php foreach ($cursos as $curso): ?>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="<?= $curso['order'] * 100 ?? 0 ?>">
+                <div class="card h-100 shadow-sm hover-lift">
+                    <?php if (!empty($curso['imagem'])): ?>
+                    <img src="<?= htmlspecialchars($curso['imagem']) ?>" 
+                         class="card-img-top" 
+                         alt="<?= htmlspecialchars($curso['nome']) ?>"
+                         style="height: 200px; object-fit: cover;">
+                    <?php endif; ?>
+                    
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold"><?= htmlspecialchars($curso['nome']) ?></h5>
+                        <p class="card-text text-muted">
+                            <?= htmlspecialchars(substr($curso['descricao'] ?? '', 0, 120)) ?>...
+                        </p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="badge bg-primary">
+                                <i class="fas fa-clock me-1"></i>
+                                <?= $curso['carga_horaria_min'] ?? '40' ?>h
+                            </span>
+                            <span class="badge bg-success">
+                                <i class="fas fa-users me-1"></i>
+                                <?= $curso['total_alunos'] ?? 0 ?> formados
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer bg-transparent border-0">
+                        <a href="#interesse" class="btn btn-primary w-100">
+                            <i class="fas fa-paper-plane me-2"></i>Tenho Interesse
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle me-2"></i>
+            Em breve disponibilizaremos informações sobre nossos cursos.
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+
+<!-- Professores Section -->
+<section id="professores" class="py-5">
+    <div class="container">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <h2 class="display-4 fw-bold">Nossos Professores</h2>
+            <p class="lead text-muted">Aprenda com os melhores profissionais do mercado</p>
+        </div>
+
+        <?php if (!empty($professores)): ?>
+        <div class="row g-4">
+            <?php foreach ($professores as $professor): ?>
+            <div class="col-md-6 col-lg-3" data-aos="zoom-in" data-aos-delay="<?= $professor['order'] * 100 ?? 0 ?>">
+                <div class="card text-center shadow-sm hover-lift h-100">
+                    <div class="card-body">
+                        <div class="position-relative d-inline-block mb-3">
+                            <?php if (!empty($professor['foto'])): ?>
+                            <img src="<?= htmlspecialchars($professor['foto']) ?>" 
+                                 alt="<?= htmlspecialchars($professor['nome']) ?>"
+                                 class="rounded-circle border border-3 border-primary"
+                                 style="width: 150px; height: 150px; object-fit: cover;">
+                            <?php else: ?>
+                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" 
+                                 style="width: 150px; height: 150px;">
+                                <i class="fas fa-user fa-4x text-white"></i>
+                            </div>
+                            <?php endif; ?>
+                            <span class="position-absolute bottom-0 end-0 badge bg-success rounded-pill">
+                                <i class="fas fa-check"></i>
+                            </span>
+                        </div>
+                        
+                        <h5 class="card-title fw-bold mb-1">
+                            <?= htmlspecialchars($professor['nome']) ?>
+                        </h5>
+                        
+                        <?php if (!empty($professor['titulo'])): ?>
+                        <p class="text-primary mb-2">
+                            <small><?= htmlspecialchars($professor['titulo']) ?></small>
+                        </p>
+                        <?php endif; ?>
+                        
+                        <p class="card-text text-muted small">
+                            <?= htmlspecialchars(substr($professor['descricao'] ?? '', 0, 100)) ?>...
+                        </p>
+                        
+                        <?php if (!empty($professor['total_alunos'])): ?>
+                        <div class="mt-3">
+                            <span class="badge bg-light text-dark">
+                                <i class="fas fa-users me-1"></i>
+                                <?= $professor['total_alunos'] ?> alunos formados
+                            </span>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="card-footer bg-transparent border-0">
+                        <a href="/professor?id=<?= htmlspecialchars($professor['professorid']) ?>" 
+                           class="btn btn-outline-primary btn-sm w-100">
+                            <i class="fas fa-user-circle me-1"></i>Ver Perfil
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle me-2"></i>
+            Em breve apresentaremos nossa equipe de professores.
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+
+<!-- Alunos Formados Section -->
+<section id="alunos" class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <h2 class="display-4 fw-bold">Alunos Formados</h2>
+            <p class="lead text-muted">Conheça alguns de nossos ex-alunos de sucesso</p>
+        </div>
+
+        <?php if (!empty($alunosDestaque)): ?>
+        <!-- Swiper Carousel -->
+        <div class="swiper alunosSwiper" data-aos="fade-up">
+            <div class="swiper-wrapper">
+                <?php foreach ($alunosDestaque as $aluno): ?>
+                <div class="swiper-slide">
+                    <div class="card shadow-sm text-center">
+                        <div class="card-body p-4">
+                            <?php if (!empty($aluno['foto'])): ?>
+                            <img src="<?= htmlspecialchars($aluno['foto']) ?>" 
+                                 alt="<?= htmlspecialchars($aluno['nome']) ?>"
+                                 class="rounded-circle mb-3"
+                                 style="width: 120px; height: 120px; object-fit: cover;">
+                            <?php endif; ?>
+                            
+                            <?php if ($aluno['melhor_aluno'] ?? false): ?>
+                            <div class="mb-2">
+                                <i class="fas fa-crown text-warning fa-2x"></i>
+                                <p class="text-warning fw-bold mb-0">Melhor Aluno</p>
+                            </div>
+                            <?php endif; ?>
+                            
+                            <h5 class="card-title fw-bold"><?= htmlspecialchars($aluno['nome']) ?></h5>
+                            <p class="text-muted mb-2"><?= htmlspecialchars($aluno['curso_nome'] ?? '') ?></p>
+                            <p class="small text-muted">
+                                <i class="fas fa-calendar me-1"></i>
+                                Formado em <?= date('m/Y', strtotime($aluno['data_fim'])) ?>
+                            </p>
+                            
+                            <?php if (!empty($aluno['nota'])): ?>
+                            <div class="mb-3">
+                                <span class="badge bg-success">
+                                    <i class="fas fa-star me-1"></i>
+                                    Nota: <?= number_format($aluno['nota'], 1) ?>
+                                </span>
+                            </div>
+                            <?php endif; ?>
+                            
+                            <a href="/verificar/<?= htmlspecialchars($aluno['alunoid']) ?>" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-certificate me-1"></i>Ver Certificado
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <!-- Navigation -->
+            <div class="swiper-pagination mt-4"></div>
+            <div class="swiper-button-next"></div>
+            <div class="swiper-button-prev"></div>
+        </div>
+
+        <script>
+            // Initialize Swiper
+            const swiper = new Swiper('.alunosSwiper', {
+                slidesPerView: 1,
+                spaceBetween: 30,
+                loop: true,
+                autoplay: {
+                    delay: 3000,
+                    disableOnInteraction: false,
+                },
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                },
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+                breakpoints: {
+                    640: {
+                        slidesPerView: 2,
+                    },
+                    768: {
+                        slidesPerView: 3,
+                    },
+                    1024: {
+                        slidesPerView: 4,
+                    },
+                }
+            });
+        </script>
+        <?php else: ?>
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle me-2"></i>
+            Em breve apresentaremos nossos alunos formados.
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+
+<!-- Formulário de Interesse Section -->
+<section id="interesse" class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-lg border-0" data-aos="fade-up">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-paper-plane fa-3x text-primary mb-3"></i>
+                            <h2 class="fw-bold">Tenho Interesse!</h2>
+                            <p class="text-muted">Preencha o formulário e entraremos em contato</p>
+                        </div>
+
+                        <?php if (!empty($_SESSION['success'])): ?>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <?= htmlspecialchars($_SESSION['success']) ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        <?php unset($_SESSION['success']); ?>
+                        <?php endif; ?>
+
+                        <?php if (!empty($_SESSION['error'])): ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <?= htmlspecialchars($_SESSION['error']) ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        <?php unset($_SESSION['error']); ?>
+                        <?php endif; ?>
+
+                        <form id="formInteresse" method="POST" action="/interessados/criar">
+                            <?= csrf_field() ?>
+                            
+                            <!-- Honeypot (anti-spam) -->
+                            <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off">
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="nome" class="form-label">Nome Completo *</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="nome" 
+                                           name="nome" 
+                                           required
+                                           minlength="3"
+                                           value="<?= htmlspecialchars($_SESSION['old']['nome'] ?? '') ?>">
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label">E-mail *</label>
+                                    <input type="email" 
+                                           class="form-control" 
+                                           id="email" 
+                                           name="email" 
+                                           required
+                                           value="<?= htmlspecialchars($_SESSION['old']['email'] ?? '') ?>">
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label for="whatsapp" class="form-label">WhatsApp</label>
+                                    <input type="tel" 
+                                           class="form-control" 
+                                           id="whatsapp" 
+                                           name="whatsapp"
+                                           placeholder="(00) 00000-0000"
+                                           data-mask="(00) 00000-0000"
+                                           value="<?= htmlspecialchars($_SESSION['old']['whatsapp'] ?? '') ?>">
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label for="curso_interesse" class="form-label">Curso de Interesse</label>
+                                    <select class="form-select" id="curso_interesse" name="curso_interesse">
+                                        <option value="">Selecione um curso</option>
+                                        <?php foreach ($cursos as $curso): ?>
+                                        <option value="<?= $curso['id'] ?>"
+                                                <?= (($_SESSION['old']['curso_interesse'] ?? '') == $curso['id']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($curso['nome']) ?>
+                                        </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-12">
+                                    <label for="mensagem" class="form-label">Mensagem (Opcional)</label>
+                                    <textarea class="form-control" 
+                                              id="mensagem" 
+                                              name="mensagem" 
+                                              rows="4"
+                                              placeholder="Conte-nos um pouco sobre suas expectativas..."><?= htmlspecialchars($_SESSION['old']['mensagem'] ?? '') ?></textarea>
+                                </div>
+                                
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               id="aceite_termos" 
+                                               required>
+                                        <label class="form-check-label" for="aceite_termos">
+                                            Aceito receber informações sobre cursos e promoções *
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                                        <i class="fas fa-paper-plane me-2"></i>
+                                        Enviar Interesse
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                        <?php unset($_SESSION['old']); ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Call-to-Action Section -->
+<section class="py-5 bg-primary text-white">
+    <div class="container text-center" data-aos="zoom-in">
+        <h2 class="display-5 fw-bold mb-3">Pronto para Começar?</h2>
+        <p class="lead mb-4">Entre em contato conosco e inicie sua jornada profissional</p>
+        <div class="d-flex gap-3 justify-content-center">
+            <?php if (!empty($config['whatsapp'])): ?>
+            <a href="https://wa.me/<?= preg_replace('/\D/', '', $config['whatsapp']) ?>?text=Olá! Gostaria de mais informações sobre os cursos." 
+               class="btn btn-light btn-lg"
+               target="_blank">
+                <i class="fab fa-whatsapp me-2"></i>WhatsApp
+            </a>
+            <?php endif; ?>
+            
+            <a href="/contato" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-envelope me-2"></i>Formulário de Contato
+            </a>
+        </div>
+    </div>
+</section>
+
+<?php include __DIR__ . '/includes/footer.php'; ?>
+<?php include __DIR__ . '/includes/scripts.php'; ?>

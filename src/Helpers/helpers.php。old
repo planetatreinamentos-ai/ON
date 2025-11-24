@@ -1,0 +1,235 @@
+<?php
+
+/**
+ * Helpers Globais
+ * Funções auxiliares disponíveis em todas as views
+ */
+
+/**
+ * Gerar campo CSRF token para formulários
+ */
+function csrf_field(): string
+{
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    
+    return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($_SESSION['csrf_token']) . '">';
+}
+
+/**
+ * Obter CSRF token
+ */
+function csrf_token(): string
+{
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    
+    return $_SESSION['csrf_token'];
+}
+
+/**
+ * Validar CSRF token
+ */
+function csrf_verify(): bool
+{
+    $token = $_POST['csrf_token'] ?? '';
+    
+    if (empty($token) || !isset($_SESSION['csrf_token'])) {
+        return false;
+    }
+    
+    return hash_equals($_SESSION['csrf_token'], $token);
+}
+
+/**
+ * Escapar output HTML
+ */
+function e(?string $value): string
+{
+    return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
+}
+
+/**
+ * Verificar se usuário está autenticado
+ */
+function auth(): bool
+{
+    return isset($_SESSION['user_id']);
+}
+
+/**
+ * Obter usuário atual
+ */
+function current_user(): ?array
+{
+    if (!auth()) {
+        return null;
+    }
+    
+    return $_SESSION['user'] ?? null;
+}
+
+/**
+ * Redirecionar
+ */
+function redirect(string $url, int $code = 302): void
+{
+    http_response_code($code);
+    header("Location: $url");
+    exit;
+}
+
+/**
+ * Retornar JSON
+ */
+function json_response(array $data, int $code = 200): void
+{
+    http_response_code($code);
+    header('Content-Type: application/json');
+    echo json_encode($data);
+    exit;
+}
+
+/**
+ * Obter URL base
+ */
+function base_url(string $path = ''): string
+{
+    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $basePath = rtrim($path, '/');
+    
+    return $protocol . '://' . $host . ($basePath ? '/' . ltrim($basePath, '/') : '');
+}
+
+/**
+ * Obter URL do asset
+ */
+function asset(string $path): string
+{
+    return base_url('/assets/' . ltrim($path, '/'));
+}
+
+/**
+ * Formatar data BR
+ */
+function date_br(?string $date, string $format = 'd/m/Y'): string
+{
+    if (empty($date)) {
+        return '';
+    }
+    
+    try {
+        $datetime = new DateTime($date);
+        return $datetime->format($format);
+    } catch (Exception $e) {
+        return '';
+    }
+}
+
+/**
+ * Formatar moeda BR
+ */
+function money_br(?float $value): string
+{
+    if ($value === null) {
+        return 'R$ 0,00';
+    }
+    
+    return 'R$ ' . number_format($value, 2, ',', '.');
+}
+
+/**
+ * Limitar string
+ */
+function str_limit(?string $value, int $limit = 100, string $end = '...'): string
+{
+    if (empty($value)) {
+        return '';
+    }
+    
+    if (mb_strlen($value) <= $limit) {
+        return $value;
+    }
+    
+    return mb_substr($value, 0, $limit) . $end;
+}
+
+/**
+ * Pluralizar
+ */
+function pluralize(int $count, string $singular, string $plural): string
+{
+    return $count === 1 ? $singular : $plural;
+}
+
+/**
+ * Flash message - Definir
+ */
+function flash(string $type, string $message): void
+{
+    $_SESSION['flash'][$type] = $message;
+}
+
+/**
+ * Flash message - Obter e limpar
+ */
+function get_flash(string $type): ?string
+{
+    if (!isset($_SESSION['flash'][$type])) {
+        return null;
+    }
+    
+    $message = $_SESSION['flash'][$type];
+    unset($_SESSION['flash'][$type]);
+    
+    return $message;
+}
+
+/**
+ * Old input - Armazenar
+ */
+function old_input(array $data): void
+{
+    $_SESSION['old_input'] = $data;
+}
+
+/**
+ * Old input - Obter valor
+ */
+function old(string $key, $default = ''): string
+{
+    $value = $_SESSION['old_input'][$key] ?? $default;
+    return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+}
+
+/**
+ * Old input - Limpar
+ */
+function clear_old(): void
+{
+    unset($_SESSION['old_input']);
+}
+
+/**
+ * Debug helper
+ */
+function dd(...$vars): void
+{
+    echo '<pre>';
+    foreach ($vars as $var) {
+        var_dump($var);
+    }
+    echo '</pre>';
+    exit;
+}
+
+/**
+ * Verificar se ambiente é de desenvolvimento
+ */
+function is_dev(): bool
+{
+    return ($_ENV['APP_ENV'] ?? 'production') === 'development';
+}

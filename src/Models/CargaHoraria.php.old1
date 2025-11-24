@@ -1,0 +1,138 @@
+<?php
+
+namespace PlanetaTreinamentos\Models;
+
+use PDO;
+
+/**
+ * Model CargaHoraria
+ * Gerencia cargas horárias dos cursos
+ */
+class CargaHoraria
+{
+    private PDO $db;
+
+    public function __construct(PDO $db)
+    {
+        $this->db = $db;
+    }
+
+    /**
+     * Buscar todas as cargas horárias
+     */
+    public function getAll(array $filters = []): array
+    {
+        $sql = "SELECT ch.*, c.nome as curso_nome 
+                FROM cargas_horarias ch
+                LEFT JOIN cursos c ON ch.curso_id = c.id
+                WHERE 1=1";
+        $params = [];
+
+        // Filtro por curso
+        if (isset($filters['curso_id'])) {
+            $sql .= " AND ch.curso_id = ?";
+            $params[] = $filters['curso_id'];
+        }
+
+        $sql .= " ORDER BY c.nome ASC, ch.carga_horaria ASC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Buscar carga horária por ID
+     */
+    public function getById(int $id): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT ch.*, c.nome as curso_nome 
+            FROM cargas_horarias ch
+            LEFT JOIN cursos c ON ch.curso_id = c.id
+            WHERE ch.id = ?
+        ");
+        $stmt->execute([$id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result ?: null;
+    }
+
+    /**
+     * Buscar cargas horárias por curso
+     */
+    public function getByCurso(int $cursoId): array
+    {
+        $stmt = $this->db->prepare("
+            SELECT * FROM cargas_horarias 
+            WHERE curso_id = ? 
+            ORDER BY carga_horaria ASC
+        ");
+        $stmt->execute([$cursoId]);
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Criar nova carga horária
+     */
+    public function create(array $data): int
+    {
+        $stmt = $this->db->prepare("
+            INSERT INTO cargas_horarias (
+                curso_id, carga_horaria, descricao, created_at
+            ) VALUES (?, ?, ?, NOW())
+        ");
+
+        $stmt->execute([
+            $data['curso_id'],
+            $data['carga_horaria'],
+            $data['descricao'] ?? null
+        ]);
+
+        return (int) $this->db->lastInsertId();
+    }
+
+    /**
+     * Atualizar carga horária
+     */
+    public function update(int $id, array $data): bool
+    {
+        $stmt = $this->db->prepare("
+            UPDATE cargas_horarias SET
+                curso_id = ?,
+                carga_horaria = ?,
+                descricao = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+
+        return $stmt->execute([
+            $data['curso_id'],
+            $data['carga_horaria'],
+            $data['descricao'] ?? null,
+            $id
+        ]);
+    }
+
+    /**
+     * Deletar carga horária
+     */
+    public function delete(int $id): bool
+    {
+        // Verificar se está em uso
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) FROM alunos WHERE carga_horaria_id = ?
+        ");
+        $stmt->execute([$id]);
+        $inUse = $stmt->fetchColumn() > 0;
+
+        if ($inUse) {
+            return false; // Não pode deletar se estiver em uso
+        }
+
+        $stmt = $this->db->prepare("DELETE FROM cargas_horarias WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
+}
